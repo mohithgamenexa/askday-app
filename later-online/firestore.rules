@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function groupDoc(gid) { return get(/databases/$(database)/documents/groups/$(gid)).data; }
+    function isMember(gid) { return signedIn() && request.auth.uid in groupDoc(gid).memberIds; }
+    function validName(n) { return n is string && n.size() >= 1 && n.size() <= 30; }
+    function validPhoto(p) { return p == null || (p is string && p.size() < 1024); }
+
+    // Profiles: anyone signed in can see names and photos. Stats are written by the server.
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'photoURL', 'notif', 'createdAt', 'updatedAt'])
+        && validName(request.resource.data.name)
+        && validPhoto(request.resource.data.get('photoURL', null));
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL', 'notif', 'updatedAt'])
+        && validName(request.resource.data.name)
+        && validPhoto(request.resource.data.get('photoURL', null));
+      allow delete: if false;
+
+      // Push tokens and "last seen" markers are private to their owner.
+      match /private/{doc} { allow read, write: if signedIn() && request.auth.uid == uid; }
+      match /seen/{gid} { allow read, write: if signedIn() && request.auth.uid == uid; }
+    }
+
+    // Only the server reads invite codes.
+    match /inviteCodes/{code} { allow read, write: if false; }
+
+    match /groups/{gid} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
+      // Members can rename the group or change its photo. Everything else goes through functions.
+      allow update: if signedIn() && request.auth.uid in resource.data.memberIds
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 40
+        && validPhoto(request.resource.data.photoURL);
+      allow create, delete: if false;
+
+      match /questions/{qid} {
+        allow read: if isMember(gid);
+        allow write: if false;
+
+        function question() { return get(/databases/$(database)/documents/groups/$(gid)/questions/$(qid)).data; }
+        function hasAnswered() {
+          return exists(/databases/$(database)/documents/groups/$(gid)/questions/$(qid)/answers/$(request.auth.uid));
+        }
+        // You see everyone's answers only after you've answered and the question has unlocked.
+        function canSeeAll() { return isMember(gid) && hasAnswered() && question().unlocked == true; }
+
+        match /answers/{uid} {
+          allow get: if signedIn() && ((request.auth.uid == uid && isMember(gid)) || canSeeAll());
+          allow list: if canSeeAll();
+          allow create: if isMember(gid) && request.auth.uid == uid
+            && groupDoc(gid).current.id == qid
+            && request.resource.data.keys().hasOnly(['uid', 'text', 'createdAt', 'likes', 'replyCount'])
+            && request.resource.data.uid == uid
+            && request.resource.data.text is string
+            && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 280
+            && request.resource.data.likes == []
+            && request.resource.data.replyCount == 0
+            && request.resource.data.createdAt == request.time;
+          // Liking: you can only add or remove yourself.
+          allow update: if canSeeAll()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+            && likeToggle();
+          allow delete: if false;
+
+          function likeToggle() {
+            let before = resource.data.likes.toSet();
+            let after = request.resource.data.likes.toSet();
+            let me = [request.auth.uid].toSet();
+            return (after == before.union(me) && !before.hasAll(me))
+                || (after == before.difference(me) && before.hasAll(me));
+          }
+        }
+
+        match /comments/{cid} {
+          allow read: if canSeeAll();
+          allow create: if canSeeAll()
+            && request.resource.data.keys().hasOnly(['uid', 'text', 'answerId', 'createdAt'])
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.text is string
+            && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 280
+            && (request.resource.data.answerId == null || request.resource.data.answerId is string)
+            && request.resource.data.createdAt == request.time;
+          allow update, delete: if false;
+        }
+
+        match /nudges/{id} { allow read, write: if false; }
+      }
+    }
+  }
+}

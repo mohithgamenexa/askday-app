@@ -1,46 +1,42 @@
-# Builds the Android APK on GitHub's servers every time you upload changes.
+# Builds the native Android APK on GitHub's servers whenever anything in android/ changes.
 # Download it from the "Actions" tab: open the latest run, then "askday-apk".
 name: Build Android APK
 
 on:
   push:
     branches: [main, master]
+    paths:
+      - "android/**"
+      - ".github/workflows/build-apk.yml"
   workflow_dispatch: # also lets you start a build by hand from the Actions tab
 
 jobs:
   apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     defaults:
       run:
-        working-directory: app
+        working-directory: android
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: app/package-lock.json
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Install packages
-        run: npm ci
+      # Caches Gradle downloads so later builds are faster
+      - uses: gradle/actions/setup-gradle@v4
 
-      - name: Generate the Android project
-        run: npx expo prebuild --platform android --no-install
+      - name: Make gradlew runnable
+        run: chmod +x gradlew
 
       - name: Build the APK
-        working-directory: app/android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a -Pandroid.enableShrinkResourcesInReleaseBuilds=true -Pexpo.useLegacyPackaging=true
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Upload the APK
         uses: actions/upload-artifact@v4
         with:
           name: askday-apk
-          path: app/android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error

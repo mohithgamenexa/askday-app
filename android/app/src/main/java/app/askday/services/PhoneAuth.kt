@@ -4,7 +4,7 @@ import android.app.Activity
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthTooManyRequestsException
+import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
@@ -72,7 +72,7 @@ object PhoneAuth {
 
     private fun friendly(e: Exception): String = when (e) {
         is FirebaseAuthInvalidCredentialsException -> "That code or number isn’t right. Check it and try again."
-        is FirebaseAuthTooManyRequestsException -> "Too many attempts. Wait a little and try again."
+        is FirebaseTooManyRequestsException -> "Too many attempts. Wait a little and try again."
         else -> "We couldn’t send the code. Check your connection and try again."
     }
 }

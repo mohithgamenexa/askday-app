@@ -3,7 +3,7 @@ package app.askday.data
 // Content for the local demo. Sample friends answer each question with one of
 // these lines, so the answers make sense when they unlock.
 
-val SAMPLE_FRIENDS = listOf("Priya", "Sam", "Rohan", "Jaya", "Meera", "Arjun", "Kabir", "Zoya")
+val SAMPLE_FRIENDS = listOf("Priya", "Sam", "Rohan", "Jaya", "Meera", "Arjun", "Kabir", "Zoya", "Ishaan", "Tara", "Dev", "Anika", "Vikram", "Neha")
 
 class DemoQuestion(val text: String, val answers: List<String>)
 
@@ -343,3 +343,65 @@ class Mulberry32(private var state: Int) {
         return ((t xor (t ushr 14)).toLong() and 0xFFFFFFFFL).toDouble() / 4294967296.0
     }
 }
+
+/** The packs people pick in onboarding. */
+val PACK_NAMES = listOf("Funny", "Deep talk", "Throwback", "Hot takes", "Family", "Spicy", "Campus", "Work")
+
+/** Which packs each demo question belongs to, in the same order as DEMO_QUESTIONS. */
+val QUESTION_PACKS: List<Set<String>> = listOf(
+    setOf("Funny", "Family"),          // worst gift
+    setOf("Hot takes", "Funny"),       // one food forever
+    setOf("Funny", "Work"),            // skill you pretend to have
+    setOf("Hot takes"),                // controversial food opinion
+    setOf("Funny", "Deep talk"),       // autobiography title
+    setOf("Funny", "Campus"),          // fictional world
+    setOf("Funny", "Spicy"),           // karaoke song
+    setOf("Deep talk"),                // small thing that makes your day
+    setOf("Campus", "Work"),           // teach a class
+    setOf("Hot takes", "Spicy"),       // hill you'll die on
+    setOf("Throwback", "Family"),      // best meal
+    setOf("Throwback", "Family"),      // wanted to be at seven
+    setOf("Spicy", "Funny"),           // pettiest thing
+    setOf("Funny"),                    // which animal
+    setOf("Work", "Funny"),            // best thing bought
+    setOf("Funny", "Campus"),          // zombie apocalypse
+    setOf("Throwback"),                // comfort show
+    setOf("Throwback", "Funny"),       // worst haircut
+    setOf("Deep talk", "Throwback"),   // sound you love
+    setOf("Deep talk", "Family"),      // ideal Sunday
+    setOf("Funny", "Work"),            // phrase you say too much
+    setOf("Family", "Funny"),          // signature dish
+    setOf("Deep talk"),                // tiny luxury
+    setOf("Spicy", "Funny"),           // irrational fear
+    setOf("Work", "Funny"),            // café name
+    setOf("Spicy", "Throwback"),       // most spontaneous
+    setOf("Deep talk"),                // best compliment
+    setOf("Deep talk", "Work"),        // extra hour
+    setOf("Work", "Campus"),           // small win
+    setOf("Deep talk", "Campus"),      // looking forward to
+)
+
+/**
+ * Picks the question for a group's day: its own shuffled order, preferring the packs you chose
+ * and skipping anything the group saw recently.
+ */
+fun pickQuestionIndex(seed: Int, day: Int, packs: List<String>, recent: Set<Int>): Int {
+    val n = DEMO_QUESTIONS.size
+    val wanted = packs.toSet()
+    val start = questionIndexFor(seed, day)
+    val order = (0 until n).map { questionIndexFor(seed, day + it) }.distinct().ifEmpty { listOf(start) }
+    if (wanted.isNotEmpty()) {
+        order.firstOrNull { it !in recent && QUESTION_PACKS.getOrNull(it).orEmpty().any(wanted::contains) }?.let { return it }
+    }
+    return order.firstOrNull { it !in recent } ?: start
+}
+
+/** Generic friend answers for questions written by a member rather than from the bank. */
+val MEMBER_QUESTION_ANSWERS = listOf(
+    "Okay, this is a good one. Honestly? Pizza at 2 AM.",
+    "I’ve been thinking about this all day.",
+    "Can’t say it here, ask me in person.",
+    "Easy. My grandmother. Next question.",
+    "Whoever wrote this knows us too well.",
+    "Hmm. Coffee, then everything else.",
+)

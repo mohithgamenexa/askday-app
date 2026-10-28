@@ -55,14 +55,32 @@ object Engine {
         }
 
         val day = g.day + 1
-        val qIndex = questionIndexFor(g.seed, day)
+        // Where today's question comes from, in order: the question master's question,
+        // your Ask of the day, then the question bank (preferring your packs).
+        var qIndex = -1
+        var text: String
+        var askedBy: String? = null
+        val written = g.nextQuestion
+        val promoted = Social.askOfTheDay(d, g.id, now)?.takeIf { it.uid == d.me && !it.promoted }
+        when {
+            written != null -> { text = written; askedBy = g.nextQuestionBy }
+            promoted != null -> { text = promoted.question; askedBy = promoted.uid; promoted.promoted = true }
+            else -> {
+                val recent = d.questions[g.id]?.values.orEmpty().sortedByDescending { it.day }.take(20).map { it.qIndex }.toSet()
+                qIndex = pickQuestionIndex(g.seed, day, d.profile?.packs.orEmpty(), recent)
+                text = DEMO_QUESTIONS[qIndex].text
+            }
+        }
+        g.nextQuestion = null
+        g.nextQuestionBy = null
         val q = QuestionRec(
             id = "day-" + day.toString().padStart(5, '0'),
             day = day,
-            text = DEMO_QUESTIONS[qIndex].text,
+            text = text,
             qIndex = qIndex,
             dropAt = now,
             unlockAt = now + UNLOCK_AFTER,
+            askedBy = askedBy,
         )
         d.questions.getOrPut(g.id) { mutableMapOf() }[q.id] = q
         d.answers[qkey(g.id, q.id)] = mutableListOf()
@@ -82,19 +100,19 @@ object Engine {
     }
 
     private fun friendAnswerText(q: QuestionRec, uid: String, g: GroupRec): String {
-        val answers = DEMO_QUESTIONS.getOrNull(q.qIndex)?.answers ?: listOf("Good question. Still thinking.")
+        val answers = DEMO_QUESTIONS.getOrNull(q.qIndex)?.answers ?: MEMBER_QUESTION_ANSWERS
         val friends = g.memberIds.filter(::isSample)
         return answers[(friends.indexOf(uid) + q.day).mod(answers.size)]
     }
 
-    private fun award(d: DB, badge: String, now: Long) {
+    internal fun award(d: DB, badge: String, now: Long) {
         val p = d.profile ?: return
         if (p.badges.containsKey(badge)) return
         p.badges[badge] = now
         d.celebrations.add(Celebration(newId(), CelebrationKind.badge, badge = badge))
     }
 
-    private fun addAnswer(d: DB, g: GroupRec, q: QuestionRec, uid: String, text: String, now: Long) {
+    private fun addAnswer(d: DB, g: GroupRec, q: QuestionRec, uid: String, text: String, now: Long, photo: String? = null, voice: String? = null, voiceMs: Long = 0) {
         if (uid in q.answeredBy) return
         val key = qkey(g.id, q.id)
         val reactions = mutableMapOf<String, Reaction>()
@@ -104,7 +122,7 @@ object Engine {
             }
         }
         val wasFirst = q.answeredBy.isEmpty()
-        d.answers.getOrPut(key) { mutableListOf() }.add(Answer(uid, uid, text, now, reactions))
+        d.answers.getOrPut(key) { mutableListOf() }.add(Answer(uid, uid, text, now, reactions, photo = photo, voice = voice, voiceMs = voiceMs))
         q.answeredBy.add(uid)
         g.lastActivityAt = now
         refreshTop(d, g.id, q)
@@ -118,7 +136,7 @@ object Engine {
             if (hour >= 23 || hour < 4) award(d, "night_owl", now)
         }
 
-        val everyoneIn = g.memberIds.all { it in q.answeredBy }
+        val everyoneIn = groupIsIn(g, q)
         if (everyoneIn && !q.allAnswered) {
             q.allAnswered = true
             q.unlocked = true
@@ -137,6 +155,26 @@ object Engine {
             }
             planReactions(d, g, q, now)
         }
+    }
+
+    /** Groups of 10 or more keep their streak when 80% answer; smaller groups need everyone. */
+    const val BIG_GROUP = 10
+
+    fun streakTarget(g: GroupRec): Int =
+        if (g.memberIds.size >= BIG_GROUP) Math.ceil(g.memberIds.size * 0.8).toInt() else g.memberIds.size
+
+    fun groupIsIn(g: GroupRec, q: QuestionRec) = g.memberIds.count { it in q.answeredBy } >= streakTarget(g)
+
+    /** Each day one member is the question master and writes tomorrow's group question. */
+    fun questionMaster(g: GroupRec): String = g.memberIds[Math.floorMod(g.day + g.seed, g.memberIds.size)]
+
+    fun setNextQuestion(d: DB, groupId: String, text: String) {
+        val g = d.groups[groupId] ?: throw AskdayError("This group isn’t available anymore.")
+        if (questionMaster(g) != d.me) throw AskdayError("It’s not your turn to ask yet.")
+        val clean = text.trim().replace(Regex("\\s+"), " ")
+        if (clean.length < 5) throw AskdayError("Write a question for tomorrow first.")
+        g.nextQuestion = clean.take(140)
+        g.nextQuestionBy = d.me
     }
 
     /** After answers unlock, friends react to your answer and someone replies. */
@@ -251,13 +289,13 @@ object Engine {
         }
     }
 
-    fun createGroup(d: DB, name: String, slot: DropSlot, now: Long): String {
+    fun createGroup(d: DB, name: String, slot: DropSlot, now: Long, friends: Int = 4): String {
         val clean = name.trim()
         if (clean.isEmpty()) throw AskdayError("Give your group a name.")
         val me = requireMe(d)
         val id = newId()
         val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-        val names = SAMPLE_FRIENDS.shuffled(random).take(4)
+        val names = SAMPLE_FRIENDS.shuffled(random).take(friends.coerceIn(1, SAMPLE_FRIENDS.size))
         for (n in names) d.people.getOrPut(friendId(n)) { Profile(friendId(n), n, sample = true) }
         val g = GroupRec(
             id = id,
@@ -289,13 +327,13 @@ object Engine {
         d.seen.remove(groupId)
     }
 
-    fun submitAnswer(d: DB, groupId: String, questionId: String, uid: String, text: String, now: Long) {
+    fun submitAnswer(d: DB, groupId: String, questionId: String, uid: String, text: String, now: Long, photo: String? = null, voice: String? = null, voiceMs: Long = 0) {
         val clean = text.trim().replace(Regex("\\s+"), " ").take(280)
-        if (clean.isEmpty()) throw AskdayError("Write an answer first.")
+        if (clean.isEmpty() && photo == null && voice == null) throw AskdayError("Write an answer, or add a photo or voice note.")
         val g = d.groups[groupId] ?: throw AskdayError("This group isn’t available anymore.")
         val q = d.questions[groupId]?.get(questionId) ?: throw AskdayError("This question isn’t available anymore.")
         if (g.currentId != q.id) throw AskdayError("You can only answer today’s question.")
-        addAnswer(d, g, q, uid, clean, now)
+        addAnswer(d, g, q, uid, clean, now, photo, voice, voiceMs)
         // Friends who were waiting on you answer over the next minute or so.
         val sim = d.sim[qkey(groupId, questionId)] ?: return
         var at = now

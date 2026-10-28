@@ -31,12 +31,20 @@ class MainActivity : ComponentActivity() {
         Services.init(applicationContext)
         Store.init(applicationContext)
         Notifier.createChannel(applicationContext)
-        Store.onChange = { Notifier.reschedule(applicationContext, it) }
+        Store.onChange = {
+            Notifier.reschedule(applicationContext, it)
+            app.askday.notify.AskdayWidget.update(applicationContext, it)
+        }
 
         // Keep the clock running while the app is open: drops, friends' answers, unlocks.
         lifecycleScope.launch {
             while (true) {
-                if (Store.ready.value) Store.update { Engine.tick(it, System.currentTimeMillis()) }
+                if (Store.ready.value) Store.update {
+                    val now = System.currentTimeMillis()
+                    val a = Engine.tick(it, now)
+                    val b = app.askday.data.Social.tick(it, now)
+                    a || b
+                }
                 delay(3000)
             }
         }
@@ -54,11 +62,10 @@ class MainActivity : ComponentActivity() {
                 val bars = if (dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT) else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
                 enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
             }
-            val hasProfile = db.profile != null
-            LaunchedEffect(hasProfile) {
-                if (hasProfile && Build.VERSION.SDK_INT >= 33) askPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-            AskdayApp()
+            // Notifications are asked for during onboarding, with a reason, rather than at launch.
+            AskdayApp(askNotifications = {
+                if (Build.VERSION.SDK_INT >= 33) askPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            })
         }
     }
 
@@ -70,6 +77,6 @@ class MainActivity : ComponentActivity() {
     private fun openFromNotification(intent: Intent?) {
         val groupId = intent?.getStringExtra("groupId") ?: return
         Nav.tab(Route.Today)
-        Nav.push(Route.Group(groupId))
+        if (groupId.isNotEmpty()) Nav.push(Route.Group(groupId))
     }
 }

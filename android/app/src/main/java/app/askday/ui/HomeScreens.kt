@@ -338,13 +338,13 @@ fun TodayScreen() {
                 }
             }
 
-            if (groups.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatTile("${db.profile?.stats?.bestStreak ?: 0}", "Best streak", c.flameInk, Modifier.weight(1f))
-                    StatTile("$toAnswer", "To answer", c.ink, Modifier.weight(1f))
-                    StatTile(nextUnlock?.let { shortLeft(it - now) } ?: "—", "Next unlock", c.ink, Modifier.weight(1f))
-                }
+            MomentCard { Nav.tab(Route.Friends) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatTile("${db.profile?.stats?.bestStreak ?: 0}", "Best streak", c.flameInk, Modifier.weight(1f))
+                StatTile("${groups.sumOf { it.freezes }}", "Freezes", c.iceInk, Modifier.weight(1f))
+                StatTile("${app.askday.data.Social.waitingAsksTotal(db, now)}", "Asks waiting", c.ink, Modifier.weight(1f))
             }
+            if (groups.isNotEmpty()) Label("Your groups · ${toAnswer} to answer · next unlock ${nextUnlock?.let { shortLeft(it - now) } ?: "—"}")
 
             if (recapGroup != null) {
                 GradientBox(Modifier.fillMaxWidth().tap { Nav.push(Route.Recap(recapGroup.id)) }, RoundedCornerShape(22.dp)) {
@@ -416,20 +416,21 @@ fun TabBar(route: Route) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            for ((r, label, icon) in listOf(Triple(Route.Today, "Today", Ico.Groups), Triple(Route.History, "History", Ico.Clock), Triple(Route.Me, "Profile", Ico.User))) {
-                val active = r == route
+            val tabs = listOf(Triple(Route.Today, "Today", Ico.Sun), Triple(Route.Friends, "Friends", Ico.Groups), Triple(Route.Groups, "Groups", Ico.Chat), Triple(Route.Discover, "Discover", Ico.Spark), Triple(Route.Me, "Me", Ico.User))
+            for ((r, label, icon) in tabs) {
+                val active = r == route || (r == Route.Me && route == Route.History)
                 Row(
                     Modifier
                         .height(46.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (active) c.btnBg else Color.Transparent)
-                        .tap(label = label, scaleTo = 0.92f) { if (!active) Nav.tab(r) }
-                        .padding(horizontal = if (active) 18.dp else 16.dp),
+                        .then(if (active) Modifier.background(Brand.hero) else Modifier.background(Color.Transparent))
+                        .tap(label = label, scaleTo = 0.9f) { if (r != route) Nav.tab(r) }
+                        .padding(horizontal = if (active) 14.dp else 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    AskIcon(icon, if (active) c.btnFg else c.muted, 21.dp)
-                    if (active) Txt(label, 14, FontWeight.Bold, c.btnFg)
+                    AskIcon(icon, if (active) Color.White else c.muted, 21.dp)
+                    if (active) Txt(label, 14, FontWeight.Bold, Color.White)
                 }
             }
         }

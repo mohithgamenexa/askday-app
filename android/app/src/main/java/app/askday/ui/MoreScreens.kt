@@ -182,7 +182,7 @@ fun ProfileScreen() {
                 Box(Modifier.clip(CircleShape).background(Brand.hero).padding(3.dp)) { Avatar(p.id, p.name, p.photo, 70.dp) }
                 Column(Modifier.weight(1f)) {
                     Display(p.name, 28, maxLines = 1)
-                    Txt("Joined " + SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(p.createdAt)), 14, color = c.muted)
+                    Txt((p.username?.let { "@$it · " } ?: "") + "Joined " + SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(p.createdAt)), 14, color = c.muted)
                 }
                 Box(
                     Modifier.height(40.dp).clip(RoundedCornerShape(12.dp)).background(c.surface).border(1.5.dp, c.line2, RoundedCornerShape(12.dp))
@@ -207,6 +207,29 @@ fun ProfileScreen() {
                 }
             }
 
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Brand.sun).tap(scaleTo = 0.98f) { Nav.push(Route.Plus) }.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Txt("Try Askday+ free", 16, FontWeight.Bold, Color.White)
+                    Txt("Unlimited freezes, more Asks, full Memories", 13, color = Color.White.copy(alpha = 0.92f))
+                }
+                AskIcon(Ico.Send, Color.White, 20.dp)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for ((label, icon, route) in listOf(Triple("Memories", Ico.Clock, Route.Memories), Triple("History", Ico.Story, Route.History))) {
+                    Row(
+                        Modifier.weight(1f).height(52.dp).clip(RoundedCornerShape(16.dp)).background(c.surface).border(1.dp, c.line, RoundedCornerShape(16.dp))
+                            .tap { Nav.push(route) }.padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        AskIcon(icon, Brand.accent, 18.dp)
+                        Txt(label, 15, FontWeight.Bold)
+                    }
+                }
+            }
             Row {
                 Box(Modifier.weight(1f)) { Label("Badges") }
                 Txt("${BADGES.count { it.id in p.badges }} of ${BADGES.size}", 13, FontWeight.Bold, c.muted, tabular = true)
@@ -227,6 +250,19 @@ fun ProfileScreen() {
                     }
                 }
             }
+
+            Label("Question packs")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (pack in app.askday.data.PACK_NAMES) {
+                    val on = pack in p.packs
+                    Box(
+                        Modifier.height(40.dp).clip(CircleShape).background(if (on) c.likedBg else c.surface).border(1.5.dp, if (on) Brand.accent else c.line2, CircleShape)
+                            .tap(label = pack) { act { d -> d.profile?.packs?.let { if (pack in it) it.remove(pack) else it.add(pack) } } }.padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Txt(pack, 14, FontWeight.Bold, if (on) c.likedInk else c.ink) }
+                }
+            }
+            Txt("Group questions come from the packs you pick.", 13, color = c.muted)
 
             Label("Appearance")
             Segmented(

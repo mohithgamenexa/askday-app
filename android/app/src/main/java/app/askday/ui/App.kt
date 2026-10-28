@@ -27,12 +27,19 @@ import androidx.compose.runtime.setValue
 
 sealed interface Route {
     data object Today : Route
+    data object Friends : Route
+    data object Groups : Route
+    data object Discover : Route
     data object History : Route
     data object Me : Route
+    data object Memories : Route
+    data object Plus : Route
+    data class NewAsk(val groupId: String) : Route
+    data class AskResults(val groupId: String, val askId: String) : Route
     data object EditProfile : Route
     data object NewGroup : Route
     data object ManageGroups : Route
-    data class Group(val id: String, val q: String? = null) : Route
+    data class Group(val id: String, val q: String? = null, val tab: String? = null) : Route
     data class Game(val id: String, val q: String) : Route
     data class Recap(val id: String) : Route
 }
@@ -53,7 +60,7 @@ fun DB.current(g: GroupRec): QuestionRec? = g.currentId?.let { questions[g.id]?.
 fun DB.person(id: String): Profile? = if (profile?.id == id) profile else people[id]
 
 @Composable
-fun AskdayApp() {
+fun AskdayApp(askNotifications: () -> Unit = {}) {
     val db by Store.db.collectAsStateWithLifecycle()
     val ready by Store.ready.collectAsStateWithLifecycle()
     val dark = when (db.theme) {
@@ -71,12 +78,23 @@ fun AskdayApp() {
                 if (uid != null && db.me != uid) act { Engine.signIn(it, uid, app.askday.services.PhoneAuth.currentPhone ?: "") }
                 app.askday.services.Services.setUser(uid)
             }
-            var showPhone by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+            // Before sign-in: hook → answer first → phone. After: name and photo → username and birthday → friends → vibe.
+            var step by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("hook") }
             when {
-                uid == null || db.me != uid -> if (showPhone) {
-                    BackHandler { showPhone = false }
-                    PhoneLoginScreen(onBack = { showPhone = false })
-                } else WelcomeScreen(onContinue = { showPhone = true })
+                uid == null || db.me != uid -> when (step) {
+                    "answer" -> {
+                        BackHandler { step = "hook" }
+                        AnswerFirstScreen(onBack = { step = "hook" }, onSaved = { step = "phone" })
+                    }
+                    "phone" -> {
+                        BackHandler { step = "hook" }
+                        PhoneLoginScreen(onBack = { step = "hook" })
+                    }
+                    else -> HookScreen(onAnswer = { step = "answer" }, onHaveAccount = { step = "phone" })
+                }
+                db.profile == null -> SetupScreen(isNew = true)
+                db.profile?.username == null -> DetailsScreen()
+                !db.onboarded -> if (step == "vibe") VibeScreen(askNotifications) else FindFriendsScreen(onNext = { step = "vibe" })
                 db.profile == null -> SetupScreen(isNew = true)
                 else -> {
                     val route = Nav.stack.last()
@@ -84,17 +102,24 @@ fun AskdayApp() {
                     AnimatedContent(route, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "nav") { r ->
                         when (r) {
                             Route.Today -> TodayScreen()
+                            Route.Friends -> FriendsScreen()
+                            Route.Groups -> GroupsTabScreen()
+                            Route.Discover -> DiscoverScreen()
+                            Route.Memories -> MemoriesScreen()
+                            Route.Plus -> PlusScreen()
+                            is Route.NewAsk -> NewAskScreen(r.groupId)
+                            is Route.AskResults -> AskResultsScreen(r.groupId, r.askId)
                             Route.History -> HistoryScreen()
                             Route.Me -> ProfileScreen()
                             Route.EditProfile -> SetupScreen(isNew = false)
                             Route.NewGroup -> NewGroupScreen()
                             Route.ManageGroups -> ManageGroupsScreen()
-                            is Route.Group -> GroupScreen(r.id, r.q)
+                            is Route.Group -> GroupScreen(r.id, r.q, r.tab)
                             is Route.Game -> GameScreen(r.id, r.q)
                             is Route.Recap -> RecapScreen(r.id)
                         }
                     }
-                    if (route == Route.Today || route == Route.History || route == Route.Me) TabBar(route)
+                    if (route in listOf(Route.Today, Route.Friends, Route.Groups, Route.Discover, Route.Me, Route.History)) TabBar(route)
                     CelebrationOverlay()
                 }
             }

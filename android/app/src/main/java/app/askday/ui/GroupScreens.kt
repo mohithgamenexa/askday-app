@@ -175,6 +175,7 @@ fun NewGroupScreen() {
                     error = act { id = Engine.createGroup(it, name, slot, System.currentTimeMillis()) }
                     if (id != null) {
                         haptics(true)
+                        app.askday.services.Services.log("group_created", "drop_slot" to slot.name)
                         created = id
                     }
                 }
@@ -312,6 +313,7 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
                             if (err == null) {
                                 haptics(true)
                                 nudged[target] = true
+                                app.askday.services.Services.log("nudge_sent")
                             } else error = err
                         }.padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -362,7 +364,10 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
         if (canAnswer && myAnswer == null) {
             AskButton("Lock in my answer", icon = Ico.Lock, enabled = text.isNotBlank()) {
                 error = act { Engine.submitAnswer(it, g.id, q.id, me, text, System.currentTimeMillis()) }
-                if (error == null) haptics(true)
+                if (error == null) {
+                    haptics(true)
+                    app.askday.services.Services.log("answer_submitted", "day" to q.day, "length" to text.trim().length)
+                }
             }
         } else if (myAnswer != null && !q.unlocked) {
             Txt(
@@ -504,6 +509,7 @@ private fun AnswersView(g: GroupRec, q: QuestionRec, me: String) {
                 GradientBox(
                     Modifier.size(48.dp).tap(enabled = draft.isNotBlank(), label = "Send") {
                         error = act { Engine.postComment(it, g.id, q.id, me, draft, replyTo?.id, System.currentTimeMillis()) }
+                        app.askday.services.Services.log(if (replyTo != null) "reply_posted" else "chat_posted")
                         replyTo?.let { open[it.id] = true }
                         draft = ""
                         replyTo = null
@@ -564,6 +570,7 @@ private fun AnswerCard(
             for (k in Reaction.entries) {
                 ReactionButton(k, a.reactions.values.count { it == k }, a.reactions[me] == k) {
                     act { Engine.toggleReaction(it, g.id, q.id, a.id, me, k) }?.let(onError)
+                    app.askday.services.Services.log("reaction", "kind" to k.name)
                 }
             }
             Row(

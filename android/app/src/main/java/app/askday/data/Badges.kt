@@ -5,7 +5,7 @@ enum class BadgeIcon { spark, sun, moon, flame, crown, brain }
 class Badge(val id: String, val title: String, val description: String, val icon: BadgeIcon, val tint: Long)
 
 val BADGES = listOf(
-    Badge("first_answer", "First answer", "You answered your first question.", BadgeIcon.spark, 0xFF6C5CFF),
+    Badge("first_answer", "First answer", "You answered your first question.", BadgeIcon.spark, 0xFF0A8A80),
     Badge("early_bird", "Early bird", "First in your group to answer.", BadgeIcon.sun, 0xFFF59E0B),
     Badge("night_owl", "Night owl", "Answered after 11 PM.", BadgeIcon.moon, 0xFF4F46E5),
     Badge("streak_7", "One week strong", "A 7-day group streak.", BadgeIcon.flame, 0xFFFF8A3D),

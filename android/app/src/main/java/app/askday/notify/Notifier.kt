@@ -91,7 +91,7 @@ class NotifyReceiver : BroadcastReceiver() {
             .setContentTitle(intent.getStringExtra("title"))
             .setContentText(intent.getStringExtra("body"))
             .setStyle(NotificationCompat.BigTextStyle().bigText(intent.getStringExtra("body")))
-            .setColor(0xFF6C5CFF.toInt())
+            .setColor(0xFF0A8A80.toInt())
             .setAutoCancel(true)
             .setContentIntent(open)
             .build()

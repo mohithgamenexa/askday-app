@@ -217,14 +217,34 @@ object Engine {
 
     private fun requireMe(d: DB) = d.me ?: throw AskdayError("Start as a guest first.")
 
+    /** Used by tests and the offline demo. The app itself signs in with a phone number. */
     fun createGuest(d: DB) {
         d.me = "me_" + newId()
     }
 
+    /**
+     * After a successful phone sign-in. If a different number signs in on this phone,
+     * the previous person's data is cleared first.
+     */
+    fun signIn(d: DB, uid: String, phone: String) {
+        if (d.me != null && d.me != uid) {
+            val theme = d.theme
+            d.me = null; d.profile = null; d.people.clear(); d.groups.clear(); d.questions.clear()
+            d.answers.clear(); d.comments.clear(); d.seen.clear(); d.sim.clear(); d.celebrations.clear(); d.games.clear()
+            d.theme = theme
+        }
+        d.me = uid
+        d.profile?.phone = phone
+        pendingPhone = phone
+    }
+
+    /** Remembered between sign-in and profile setup, so the profile keeps the verified number. */
+    var pendingPhone: String? = null
+
     fun saveProfile(d: DB, name: String, photo: String?, now: Long) {
         val me = requireMe(d)
         val p = d.profile
-        if (p == null) d.profile = Profile(id = me, name = name, photo = photo, createdAt = now)
+        if (p == null) d.profile = Profile(id = me, name = name, photo = photo, phone = pendingPhone, createdAt = now)
         else {
             p.name = name
             p.photo = photo

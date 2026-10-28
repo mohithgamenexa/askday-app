@@ -5,6 +5,16 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// Firebase switches on once you add google-services.json (from the Firebase console) to this folder.
+// Without it the app still builds; phone login then shows a "set up Firebase" message.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
+// Your AdMob app ID. Until you set one in gradle.properties, Google's official test ID is used.
+val admobAppId = (project.findProperty("askday.admobAppId") as String?) ?: "ca-app-pub-3940256099942544~3347511713"
+
 android {
     namespace = "app.askday"
     compileSdk = 35
@@ -15,15 +25,29 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+        manifestPlaceholders["admobAppId"] = admobAppId
+    }
+
+    signingConfigs {
+        // A fixed key, so the SHA fingerprints you register in Firebase stay the same on every build.
+        // Fine for testing and sharing. For the Play Store, create your own key and keep it private.
+        create("askday") {
+            storeFile = file("askday-release.jks")
+            storePassword = "askday-test-key"
+            keyAlias = "askday"
+            keyPassword = "askday-test-key"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("askday")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signed with the debug key so the APK installs directly. Use your own key for the Play Store.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("askday")
         }
     }
 
@@ -53,4 +77,15 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // Firebase: phone login, analytics, crash reports, remote switches
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-config")
+
+    // Google Mobile Ads (AdMob) and Google's consent form for regions that require it
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
+    implementation("com.google.android.ump:user-messaging-platform:3.1.0")
 }

@@ -34,6 +34,8 @@ data class Profile(
     val id: String,
     var name: String,
     var photo: String? = null,
+    /** Verified phone number, for finding friends later. Never shown to other people. */
+    var phone: String? = null,
     var notif: NotifPrefs = NotifPrefs(),
     var stats: Stats = Stats(),
     /** badge id → when it was earned */

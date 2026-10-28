@@ -132,6 +132,7 @@ fun HistoryScreen() {
                         }
                     }
                 }
+                AdBanner()
             }
         }
     }
@@ -231,7 +232,10 @@ fun ProfileScreen() {
             Segmented(
                 listOf(Triple(ThemeChoice.light, "Light", Ico.Sun), Triple(ThemeChoice.dark, "Dark", Ico.Moon), Triple(ThemeChoice.system, "Phone", Ico.PhoneTheme)),
                 db.theme,
-            ) { choice -> act { it.theme = choice } }
+            ) { choice ->
+                act { it.theme = choice }
+                app.askday.services.Services.log("theme_changed", "theme" to choice.name)
+            }
             Txt("“Phone” follows your phone’s light or dark setting.", 13, color = c.muted)
 
             Label("Notifications")
@@ -264,14 +268,16 @@ fun ProfileScreen() {
 
     confirm?.let { kind ->
         ConfirmDialog(
-            title = if (kind == "logout") "Log out of this guest account?" else "Delete your account?",
-            body = if (kind == "logout") "Guest accounts live on this phone only. Logging out erases your groups, answers and streaks."
+            title = if (kind == "logout") "Log out?" else "Delete your account?",
+            body = if (kind == "logout") "Your groups and answers are saved on this phone only for now, so logging out erases them. Signing in again starts fresh."
             else "This erases your groups, answers and streaks from this phone. It can’t be undone.",
             action = if (kind == "logout") "Log out" else "Delete account",
             onCancel = { confirm = null },
         ) {
             confirm = null
+            app.askday.services.Services.log(if (kind == "logout") "logout" else "account_deleted")
             Nav.tab(Route.Today)
+            app.askday.services.PhoneAuth.signOut()
             Store.wipe()
         }
     }
@@ -417,6 +423,7 @@ fun GameScreen(groupId: String, questionId: String) {
                         picked = null
                     } else {
                         act { Engine.saveGameScore(it, groupId, questionId, score, rounds.size, System.currentTimeMillis()) }
+                        app.askday.services.Services.log("game_completed", "score" to score, "total" to rounds.size)
                         done = true
                     }
                 }
@@ -428,11 +435,11 @@ fun GameScreen(groupId: String, questionId: String) {
 // ---------------------------------------------------------- weekly recap
 
 private val STORY_BACKGROUNDS = listOf(
-    listOf(Color(0xFF6C5CFF), Color(0xFFA24DFF), Color(0xFFFF5E8A)),
+    listOf(Color(0xFF0A8A80), Color(0xFF0E7FA8), Color(0xFF2563EB)),
     listOf(Color(0xFFFF8A3D), Color(0xFFFF5E8A)),
-    listOf(Color(0xFF1E1B4B), Color(0xFF6C5CFF)),
-    listOf(Color(0xFFA24DFF), Color(0xFFFF5E8A)),
-    listOf(Color(0xFF0F766E), Color(0xFF6C5CFF)),
+    listOf(Color(0xFF0B3B38), Color(0xFF0A8A80)),
+    listOf(Color(0xFF2563EB), Color(0xFF0EA5A4)),
+    listOf(Color(0xFF0F766E), Color(0xFF2563EB)),
 )
 
 private class RecapData(
@@ -470,6 +477,7 @@ fun RecapScreen(groupId: String) {
     val nameOf = { id: String -> if (id == me) "You" else db.person(id)?.name ?: "A friend" }
 
     val slideCount = if (r == null) 0 else 5
+    LaunchedEffect(groupId) { app.askday.services.Services.log("recap_viewed") }
     @Composable
     fun Slide(n: Int) {
         if (r == null) return

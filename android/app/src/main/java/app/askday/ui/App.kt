@@ -21,6 +21,9 @@ import app.askday.data.Profile
 import app.askday.data.QuestionRec
 import app.askday.data.Store
 import app.askday.data.ThemeChoice
+import app.askday.data.Engine
+import app.askday.data.act
+import androidx.compose.runtime.setValue
 
 sealed interface Route {
     data object Today : Route
@@ -62,8 +65,18 @@ fun AskdayApp() {
     CompositionLocalProvider(LocalColors provides c, LocalDB provides db) {
         Box(Modifier.fillMaxSize().background(c.bg)) {
             if (!ready) return@Box
+            // Signed in means: Firebase knows this phone number, and the saved data belongs to it.
+            val uid = app.askday.services.PhoneAuth.currentUid
+            androidx.compose.runtime.LaunchedEffect(uid, db.me) {
+                if (uid != null && db.me != uid) act { Engine.signIn(it, uid, app.askday.services.PhoneAuth.currentPhone ?: "") }
+                app.askday.services.Services.setUser(uid)
+            }
+            var showPhone by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
             when {
-                db.me == null -> WelcomeScreen()
+                uid == null || db.me != uid -> if (showPhone) {
+                    BackHandler { showPhone = false }
+                    PhoneLoginScreen(onBack = { showPhone = false })
+                } else WelcomeScreen(onContinue = { showPhone = true })
                 db.profile == null -> SetupScreen(isNew = true)
                 else -> {
                     val route = Nav.stack.last()

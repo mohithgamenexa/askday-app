@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import app.askday.data.Engine
 import app.askday.data.Store
 import app.askday.notify.Notifier
+import app.askday.services.Services
 import app.askday.ui.AskdayApp
 import app.askday.ui.Nav
 import app.askday.ui.Route
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Services.init(applicationContext)
         Store.init(applicationContext)
         Notifier.createChannel(applicationContext)
         Store.onChange = { Notifier.reschedule(applicationContext, it) }
@@ -37,6 +39,10 @@ class MainActivity : ComponentActivity() {
                 if (Store.ready.value) Store.update { Engine.tick(it, System.currentTimeMillis()) }
                 delay(3000)
             }
+        }
+        // Ads start only when the Remote Config switch "ads_enabled" is on.
+        lifecycleScope.launch {
+            Services.adsEnabled.collect { on -> if (on) Services.startAds(this@MainActivity) }
         }
         openFromNotification(intent)
 

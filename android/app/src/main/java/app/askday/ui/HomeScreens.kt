@@ -99,7 +99,7 @@ private fun DropIn(delayMs: Long, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun WelcomeScreen() {
+fun WelcomeScreen(onContinue: () -> Unit) {
     val c = colors
     AskScreen {
         Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(26.dp)) {
@@ -128,7 +128,7 @@ fun WelcomeScreen() {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column {
                     Display("One question.\nEvery day.", 44)
-                    Display("Don’t break it.", 44, if (c.dark) Color(0xFFC9A7FF) else Color(0xFF8B3FE6))
+                    Display("Don’t break it.", 44, if (c.dark) Color(0xFFFFB020) else Color(0xFFE5602F))
                 }
                 Txt(
                     "Answer with your friends before the clock runs out. Answers unlock only when everyone’s in, and your streak lives or dies together.",
@@ -136,8 +136,89 @@ fun WelcomeScreen() {
                 )
             }
             Box(Modifier.weight(1f))
-            AskButton("Continue as guest") { act { Engine.createGuest(it) } }
+            AskButton("Continue with phone number", icon = Ico.Lock) { onContinue() }
             Txt("By continuing you agree to our Terms and Privacy Policy.", 12, color = c.muted3, align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
+// ------------------------------------------------------------ phone login
+
+/** Phone number, then the 6-digit code Firebase sends by SMS. */
+@Composable
+fun PhoneLoginScreen(onBack: () -> Unit) {
+    val c = colors
+    val activity = LocalContext.current as android.app.Activity
+    val haptics = rememberHaptics()
+    var number by rememberSaveable { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
+    var step by rememberSaveable { mutableStateOf("number") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var resendIn by remember { mutableStateOf(0) }
+    LaunchedEffect(resendIn) { if (resendIn > 0) { delay(1000); resendIn-- } }
+
+    val full = "+91" + number.filter(Char::isDigit)
+    val signedIn = { uid: String, phone: String ->
+        busy = false
+        haptics(true)
+        app.askday.services.Services.log("login", "method" to "phone")
+        act { Engine.signIn(it, uid, phone) }
+        Unit
+    }
+    val send = { resend: Boolean ->
+        error = null
+        busy = true
+        app.askday.services.PhoneAuth.sendCode(activity, full, resend,
+            onCodeSent = { busy = false; step = "code"; resendIn = 30 },
+            onSignedIn = signedIn,
+            onError = { busy = false; error = it })
+    }
+
+    AskScreen {
+        Column(Modifier.fillMaxSize().imePadding().padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(26.dp)) {
+            BackBtn { if (step == "code") { step = "number"; code = "" } else onBack() }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Display(if (step == "number") "What’s your number?" else "Enter the code", 34)
+                Txt(
+                    if (step == "number") "We’ll text you a 6-digit code. Your number is never shown to anyone."
+                    else "We sent it to +91 ${number.trim()}. On many phones it fills in by itself.",
+                    15, color = c.muted, lineHeight = 22.sp,
+                )
+            }
+            if (step == "number") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(
+                        Modifier.width(76.dp).height(56.dp).clip(RoundedCornerShape(16.dp)).background(c.inputBg).border(1.5.dp, c.line2, RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) { Txt("+91", 17, FontWeight.Bold) }
+                    AskField(
+                        number, { number = it.filter { ch -> ch.isDigit() || ch == ' ' }.take(12) }, "98765 43210", Modifier.weight(1f), focusBorder = true,
+                        keyboard = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+                    )
+                }
+            } else {
+                AskField(
+                    code, { code = it.filter(Char::isDigit).take(6) }, "6-digit code", focusBorder = true, textSize = 22,
+                    keyboard = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+                )
+                Txt(
+                    if (resendIn > 0) "Send a new code in ${resendIn}s" else "Send a new code",
+                    14, FontWeight.Bold, if (resendIn > 0) c.muted else c.link,
+                    Modifier.tap(enabled = resendIn == 0 && !busy) { send(true) },
+                )
+            }
+            Box(Modifier.weight(1f))
+            ErrorText(error)
+            if (step == "number") {
+                AskButton(if (busy) "Sending…" else "Send code", enabled = !busy && number.count(Char::isDigit) == 10) { send(false) }
+            } else {
+                AskButton(if (busy) "Checking…" else "Verify", enabled = !busy && code.length == 6) {
+                    error = null
+                    busy = true
+                    app.askday.services.PhoneAuth.verifyCode(code, signedIn) { busy = false; error = it }
+                }
+            }
         }
     }
 }
@@ -185,6 +266,7 @@ fun SetupScreen(isNew: Boolean) {
             ErrorText(error)
             AskButton(if (isNew) "Continue" else "Save changes", enabled = name.isNotBlank()) {
                 error = act { Engine.saveProfile(it, name.trim(), photo, System.currentTimeMillis()) }
+                if (error == null && isNew) app.askday.services.Services.log("sign_up")
                 if (error == null && !isNew) Nav.pop()
             }
         }
@@ -250,6 +332,7 @@ fun TodayScreen() {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconBtn(if (c.dark) Ico.Sun else Ico.Moon, if (c.dark) "Switch to light mode" else "Switch to dark mode") {
                         act { it.theme = if (c.dark) ThemeChoice.light else ThemeChoice.dark }
+                        app.askday.services.Services.log("theme_changed", "theme" to if (c.dark) "light" else "dark")
                     }
                     IconBtn(Ico.Plus, "Create a group", solid = true) { Nav.push(Route.NewGroup) }
                 }
@@ -311,6 +394,7 @@ fun TodayScreen() {
                     }
                 }
             }
+            if (groups.isNotEmpty()) AdBanner()
         }
     }
 }

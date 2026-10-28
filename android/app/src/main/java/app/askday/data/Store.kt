@@ -64,5 +64,6 @@ fun act(block: (DB) -> Unit): String? = try {
 } catch (e: AskdayError) {
     e.message
 } catch (e: Exception) {
+    app.askday.services.Services.recordError(e)
     "Something went wrong. Try again."
 }

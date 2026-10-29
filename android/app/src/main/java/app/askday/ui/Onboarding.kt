@@ -61,6 +61,7 @@ fun GuestLink(modifier: Modifier = Modifier) {
                         busy = false
                         Services.log("login", "method" to "guest")
                         act { app.askday.data.Engine.signIn(it, uid, "") }
+                        app.askday.services.Cloud.afterSignIn(uid)
                     },
                     onError = { busy = false; error = it },
                 )

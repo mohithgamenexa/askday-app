@@ -231,6 +231,13 @@ fun ProfileScreen() {
                     }
                 }
             }
+            if (app.askday.services.PhoneAuth.isGuest) {
+                AskCard(gap = 10.dp, border = c.goldLine) {
+                    Txt("You’re using a guest account", 15, FontWeight.Bold)
+                    Txt("Add your phone number to keep your account if you change phones. Everything stays as it is.", 13, color = c.muted, lineHeight = 18.sp)
+                    AskButton("Add phone number", style = BtnStyle.Soft) { Nav.push(Route.LinkPhone) }
+                }
+            }
             MeExtras()
             db.status?.let { Txt("“$it”", 15, FontWeight.Medium, c.ink2) }
             Row {
@@ -316,6 +323,7 @@ fun ProfileScreen() {
             confirm = null
             app.askday.services.Services.log(if (kind == "logout") "logout" else "account_deleted")
             Nav.tab(Route.Today)
+            if (kind != "logout") app.askday.services.Cloud.deleteAccount(Store.db.value)
             app.askday.services.PhoneAuth.signOut()
             Store.wipe()
         }

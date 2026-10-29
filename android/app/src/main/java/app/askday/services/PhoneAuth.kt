@@ -57,7 +57,11 @@ object PhoneAuth {
     }
 
     private fun signIn(credential: PhoneAuthCredential, onSignedIn: (String, String) -> Unit, onError: (String) -> Unit) {
-        FirebaseAuth.getInstance().signInWithCredential(credential).addOnCompleteListener { task ->
+        val auth = FirebaseAuth.getInstance()
+        val guest = auth.currentUser?.takeIf { it.isAnonymous }
+        // A guest adding a phone number keeps the same account (and all their data).
+        val task0 = guest?.linkWithCredential(credential) ?: auth.signInWithCredential(credential)
+        task0.addOnCompleteListener { task ->
             val user = if (task.isSuccessful) task.result?.user else null
             if (task.isSuccessful && user != null) onSignedIn(user.uid, user.phoneNumber ?: "")
             else onError(task.exception?.let { friendly(it) } ?: "Couldn’t sign in. Try again.")
@@ -89,6 +93,7 @@ object PhoneAuth {
     private fun friendly(e: Exception): String = when (e) {
         is FirebaseAuthInvalidCredentialsException -> "That code or number isn’t right. Check it and try again."
         is FirebaseTooManyRequestsException -> "Too many attempts. Wait a little and try again."
+        is com.google.firebase.auth.FirebaseAuthUserCollisionException -> "This number already has an Askday account. Log out and sign in with it instead."
         else -> "We couldn’t send the code. Check your connection and try again."
     }
 }

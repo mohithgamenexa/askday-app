@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// Who can read and write what, enforced by Google's servers.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // Public profile: anyone signed in can see it; only you can change it.
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['name', 'username', 'status', 'createdAt', 'level', 'photoUrl', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 40;
+      allow delete: if isMe(uid);
+
+      // Phone number, birthday and settings: only you.
+      match /private/{doc} {
+        allow read, write: if isMe(uid);
+      }
+    }
+
+    // Usernames are unique: each one points to exactly one account and can't be taken over.
+    match /usernames/{name} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && name.matches('^[a-z0-9._]{3,20}$');
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+  }
+}

@@ -44,6 +44,7 @@ sealed interface Route {
     data object Insights : Route
     data object Capsule : Route
     data object Year : Route
+    data object LinkPhone : Route
     data class NewAsk(val groupId: String) : Route
     data class AskResults(val groupId: String, val askId: String) : Route
     data object EditProfile : Route
@@ -127,6 +128,7 @@ fun AskdayApp(askNotifications: () -> Unit = {}) {
                             Route.Insights -> InsightsScreen()
                             Route.Capsule -> CapsuleScreen()
                             Route.Year -> YearScreen()
+                            Route.LinkPhone -> PhoneLoginScreen(onBack = { Nav.pop() }, onDone = { Nav.pop() })
                             is Route.NewAsk -> NewAskScreen(r.groupId)
                             is Route.AskResults -> AskResultsScreen(r.groupId, r.askId)
                             Route.History -> HistoryScreen()

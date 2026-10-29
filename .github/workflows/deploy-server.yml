@@ -1,0 +1,32 @@
+# Deploys the server side (security rules now; Cloud Functions in later stages) to Firebase
+# whenever anything in server/ changes. Needs the FIREBASE_SERVICE_ACCOUNT secret (see README).
+name: Deploy server
+
+on:
+  push:
+    branches: [main, master]
+    paths: ["server/**", ".github/workflows/deploy-server.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Write the service account key
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/sa.json"
+      - name: Deploy rules
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx --yes firebase-tools@13.29.1 deploy --only firestore:rules,storage --project ask-day --non-interactive

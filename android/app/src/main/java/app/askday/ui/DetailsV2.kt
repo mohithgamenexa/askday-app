@@ -58,6 +58,16 @@ fun DetailsScreenV2() {
             ErrorText(error)
             AskButton("Continue", enabled = username.length >= 3 && day.isNotEmpty() && month.isNotEmpty() && year.length == 4) {
                 error = act { Social.saveDetails(it, username, "$day/$month/$year") }
+                if (error == null) {
+                    // Make sure nobody else has this username; undo it locally if they do.
+                    val uid = app.askday.services.PhoneAuth.currentUid
+                    if (uid != null) app.askday.services.Cloud.claimUsername(uid, username) { err ->
+                        if (err != null) {
+                            error = err
+                            act { it.profile?.username = null }
+                        }
+                    }
+                }
             }
         }
     }

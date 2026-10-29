@@ -1,19 +1,21 @@
-# Builds the native Android APK on GitHub's servers whenever anything in android/ changes.
+# Builds the Android APK on GitHub's servers whenever the Android app changes.
 # Download it from the "Actions" tab: open the latest run, then "askday-apk".
 name: Build Android APK
 
 on:
   push:
     branches: [main, master]
-    paths:
-      - "android/**"
-      - ".github/workflows/build-apk.yml"
+    paths: ["android/**", ".github/workflows/build-android.yml"]
   workflow_dispatch: # also lets you start a build by hand from the Actions tab
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true # a newer push replaces a build that's still running
 
 jobs:
   apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: android
@@ -25,14 +27,13 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # Caches Gradle downloads so later builds are faster
+      # Caches Gradle downloads and build outputs, so builds after the first are much faster.
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Make gradlew runnable
-        run: chmod +x gradlew
-
       - name: Build the APK
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        run: |
+          chmod +x gradlew   # files uploaded on github.com lose their executable flag
+          ./gradlew assembleRelease --no-daemon
 
       - name: Upload the APK
         uses: actions/upload-artifact@v4

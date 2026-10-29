@@ -146,7 +146,7 @@ fun WelcomeScreen(onContinue: () -> Unit) {
 
 /** Phone number, then the 6-digit code Firebase sends by SMS. */
 @Composable
-fun PhoneLoginScreen(onBack: () -> Unit) {
+fun PhoneLoginScreen(onBack: () -> Unit, onDone: (() -> Unit)? = null) {
     val c = colors
     val activity = LocalContext.current as android.app.Activity
     val haptics = rememberHaptics()
@@ -164,6 +164,8 @@ fun PhoneLoginScreen(onBack: () -> Unit) {
         haptics(true)
         app.askday.services.Services.log("login", "method" to "phone")
         act { Engine.signIn(it, uid, phone) }
+        app.askday.services.Cloud.afterSignIn(uid)
+        onDone?.invoke()
         Unit
     }
     val send = { resend: Boolean ->
@@ -212,7 +214,7 @@ fun PhoneLoginScreen(onBack: () -> Unit) {
             ErrorText(error)
             if (step == "number") {
                 AskButton(if (busy) "Sending…" else "Send code", enabled = !busy && number.count(Char::isDigit) == 10) { send(false) }
-                GuestLink()
+                if (onDone == null) GuestLink()
             } else {
                 AskButton(if (busy) "Checking…" else "Verify", enabled = !busy && code.length == 6) {
                     error = null

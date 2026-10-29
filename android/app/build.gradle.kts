@@ -86,6 +86,9 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-config")
+    // Phase B: the online version
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
 
     // Google Mobile Ads (AdMob) and Google's consent form for regions that require it
     implementation("com.google.android.gms:play-services-ads:23.6.0")

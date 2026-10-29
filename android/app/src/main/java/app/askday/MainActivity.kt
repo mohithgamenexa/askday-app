@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
         Store.onChange = {
             Notifier.reschedule(applicationContext, it)
             app.askday.notify.AskdayWidget.update(applicationContext, it)
+            app.askday.services.Cloud.syncProfile(it)
         }
 
         // Keep the clock running while the app is open: drops, friends' answers, unlocks.

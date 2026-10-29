@@ -128,6 +128,7 @@ fun HistoryScreen() {
                         Txt(q.text, 16, FontWeight.Bold, lineHeight = 21.sp)
                         when {
                             top != null -> Txt("Most liked · ${if (top.uid == me) "You" else db.person(top.uid)?.name}: “${top.text}”", 14, color = c.muted, lineHeight = 20.sp, maxLines = 2)
+                            me !in q.answeredBy && System.currentTimeMillis() - q.dropAt <= 7 * 86_400_000L -> Txt("Tap to answer late", 14, FontWeight.Bold, c.link)
                             me !in q.answeredBy -> Txt("You didn’t answer this one.", 14, color = c.muted3)
                         }
                     }
@@ -182,7 +183,7 @@ fun ProfileScreen() {
                 Box(Modifier.clip(CircleShape).background(Brand.hero).padding(3.dp)) { Avatar(p.id, p.name, p.photo, 70.dp) }
                 Column(Modifier.weight(1f)) {
                     Display(p.name, 28, maxLines = 1)
-                    Txt((p.username?.let { "@$it · " } ?: "") + "Joined " + SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(p.createdAt)), 14, color = c.muted)
+                    Txt((p.username?.let { "@$it · " } ?: "") + (if (app.askday.services.PhoneAuth.isGuest) "Guest · " else "") + "Joined " + SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(p.createdAt)), 14, color = c.muted)
                 }
                 Box(
                     Modifier.height(40.dp).clip(RoundedCornerShape(12.dp)).background(c.surface).border(1.5.dp, c.line2, RoundedCornerShape(12.dp))

@@ -2,4 +2,6 @@
 <paths>
     <!-- Share cards are drawn into the cache before sharing. -->
     <cache-path name="share" path="share/" />
+    <!-- Photo of the day is taken straight into the app's photo folder. -->
+    <files-path name="photos" path="photos/" />
 </paths>

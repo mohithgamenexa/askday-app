@@ -239,7 +239,7 @@ fun GroupScreen(groupId: String, questionId: String?, startTab: String? = null) 
         val waiting = app.askday.data.Social.waitingAsks(db, groupId, System.currentTimeMillis()).size
         if (questionId == null) {
             Box(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 14.dp)) {
-                Segmented(listOf(Triple("question", "Question", null), Triple("asks", if (waiting > 0) "Asks · $waiting" else "Asks", null), Triple("board", "Board", null)), tab) { tab = it }
+                Segmented(listOf(Triple("question", "Question", null), Triple("asks", if (waiting > 0) "Asks · $waiting" else "Asks", null), Triple("board", "Board", null), Triple("play", "Play", null)), tab) { tab = it }
             }
         }
         if (tab == "asks" && questionId == null) {
@@ -250,8 +250,14 @@ fun GroupScreen(groupId: String, questionId: String?, startTab: String? = null) 
             LeaderboardView(g)
             return@AskScreen
         }
+        if (tab == "play" && questionId == null) {
+            PlayView(g)
+            return@AskScreen
+        }
         if (q == null) return@AskScreen
-        if (canSeeAll) AnswersView(g, q, me) else QuestionView(g, q, myAnswer, me, isCurrent)
+        // Today's question, or catch up on the last 7 days.
+        val canAnswer = isCurrent || System.currentTimeMillis() - q.dropAt <= 7 * 86_400_000L
+        if (canSeeAll) AnswersView(g, q, me) else QuestionView(g, q, myAnswer, me, canAnswer)
     }
 }
 
@@ -304,7 +310,7 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
             Box(Modifier.offset(x = 230.dp, y = (-40).dp).size(180.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)))
             Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 26.dp, bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Label(
-                    (if (canAnswer) "Today’s question" else "Day ${q.day}") + (q.askedBy?.let { " · asked by " + if (it == me) "you" else db.person(it)?.name ?: "a member" } ?: ""),
+                    (if (canAnswer && q.id == g.currentId) "Today’s question" else if (canAnswer) "Day ${q.day} · catching up" else "Day ${q.day}") + (q.askedBy?.let { " · asked by " + if (it == me) "you" else db.person(it)?.name ?: "a member" } ?: ""),
                     Brand.onHeroMuted,
                 )
                 Display(q.text, 33, Color.White)

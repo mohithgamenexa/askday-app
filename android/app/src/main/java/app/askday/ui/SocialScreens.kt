@@ -2,6 +2,7 @@ package app.askday.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,7 +96,9 @@ fun FriendsScreen() {
     val c = colors
     val db = LocalDB.current
     val haptics = rememberHaptics()
-    val m = db.moment
+    var day by rememberSaveable { mutableStateOf<String?>(null) }
+    val m = Social.momentFor(db, day)
+    val catchingUp = day != null && day != db.moment?.dayKey
     val me = db.me ?: ""
     val mine = m?.answers?.firstOrNull { it.uid == me }
     var text by rememberSaveable { mutableStateOf("") }
@@ -116,6 +119,23 @@ fun FriendsScreen() {
                     Txt("Invite contacts", 13, FontWeight.Bold, c.btnFg)
                 }
             }
+            // Today, then the last 7 days you can still answer (late).
+            val days = listOfNotNull(db.moment) + db.pastMoments
+            if (days.size > 1) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    days.forEachIndexed { i, mo ->
+                        val on = (day ?: db.moment?.dayKey) == mo.dayKey
+                        val answered = mo.answers.any { it.uid == me }
+                        val label = if (i == 0) "Today" else SimpleDateFormat("EEE d", Locale.getDefault()).format(Date(mo.dropAt))
+                        Box(
+                            Modifier.height(36.dp).clip(CircleShape).background(if (on) c.btnBg else c.surface)
+                                .then(if (on) Modifier else Modifier.border(1.dp, c.line, CircleShape))
+                                .tap(label = label) { day = if (i == 0) null else mo.dayKey }.padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { Txt(label + if (!answered && i > 0) " ·" else "", 13, if (on) FontWeight.Bold else FontWeight.Medium, if (on) c.btnFg else c.ink) }
+                    }
+                }
+            }
             if (m == null) {
                 Txt("Today’s question is on its way.", 15, color = c.muted)
                 return@Column
@@ -124,7 +144,7 @@ fun FriendsScreen() {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.width(6.dp).height(44.dp).clip(CircleShape).background(Brand.hero))
                     Column {
-                        Label("Today’s Askday")
+                        Label(if (catchingUp) "Catching up · answers count as late" else "Today’s Askday")
                         Txt(m.text, 15, FontWeight.Bold, lineHeight = 21.sp)
                     }
                 }
@@ -134,7 +154,7 @@ fun FriendsScreen() {
                 AttachRow(attach) { attach = it }
                 ErrorText(error)
                 AskButton("Answer to see your friends", style = BtnStyle.Hero, icon = Ico.Lock, enabled = text.isNotBlank() || !attach.isEmpty) {
-                    error = act { Social.answerMoment(it, text, System.currentTimeMillis(), attach.photo, attach.voice, attach.voiceMs) }
+                    error = act { Social.answerMoment(it, text, System.currentTimeMillis(), attach.photo, attach.voice, attach.voiceMs, dayKey = day) }
                     if (error == null) {
                         haptics(true)
                         Services.log("moment_answered")
@@ -168,7 +188,7 @@ fun FriendsScreen() {
                                 val on = a.reactions[me] == k
                                 val icon = when (k) { Reaction.love -> Ico.Heart; Reaction.haha -> Ico.Laugh; Reaction.fire -> Ico.Flame; Reaction.wow -> Ico.Wow }
                                 Row(
-                                    Modifier.height(30.dp).clip(CircleShape).background(if (on) c.likedBg else c.chip).tap(label = k.name) { act { Social.reactMoment(it, a.uid, k) } }.padding(horizontal = 10.dp),
+                                    Modifier.height(30.dp).clip(CircleShape).background(if (on) c.likedBg else c.chip).tap(label = k.name) { act { Social.reactMoment(it, a.uid, k, day) } }.padding(horizontal = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(5.dp),
                                 ) {

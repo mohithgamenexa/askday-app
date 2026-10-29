@@ -64,6 +64,22 @@ object PhoneAuth {
         }
     }
 
+    /** True when signed in as a guest (no phone number). */
+    val isGuest: Boolean get() = Services.firebaseReady && FirebaseAuth.getInstance().currentUser?.isAnonymous == true
+
+    /**
+     * Signs in as a guest with Firebase anonymous sign-in: a real account ID, no phone number.
+     * Needs "Anonymous" turned on in Firebase › Authentication › Sign-in method.
+     */
+    fun signInAsGuest(onSignedIn: (uid: String) -> Unit, onError: (String) -> Unit) {
+        if (!Services.firebaseReady) return onError("Guest sign-in needs Firebase. Add google-services.json to the app first.")
+        FirebaseAuth.getInstance().signInAnonymously().addOnCompleteListener { task ->
+            val user = if (task.isSuccessful) task.result?.user else null
+            if (user != null) onSignedIn(user.uid)
+            else onError("Couldn’t start a guest account. In Firebase, turn on Anonymous sign-in, then try again.")
+        }
+    }
+
     fun signOut() {
         if (Services.firebaseReady) FirebaseAuth.getInstance().signOut()
         verificationId = null

@@ -43,6 +43,34 @@ import app.askday.data.Social
 import app.askday.data.act
 import app.askday.services.Services
 
+/** Starts a guest account and continues onboarding. */
+@Composable
+fun GuestLink(modifier: Modifier = Modifier) {
+    val c = colors
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Txt(
+            if (busy) "Starting…" else "Continue as guest",
+            14, FontWeight.Bold, c.muted,
+            Modifier.fillMaxWidth().tap(enabled = !busy, label = "Continue as guest") {
+                busy = true
+                error = null
+                app.askday.services.PhoneAuth.signInAsGuest(
+                    onSignedIn = { uid ->
+                        busy = false
+                        Services.log("login", "method" to "guest")
+                        act { app.askday.data.Engine.signIn(it, uid, "") }
+                    },
+                    onError = { busy = false; error = it },
+                )
+            },
+            align = TextAlign.Center,
+        )
+        ErrorText(error)
+    }
+}
+
 /** The thin progress bar along the top of onboarding. */
 @Composable
 fun OnboardingProgress(step: Int, total: Int = 5) {
@@ -82,7 +110,7 @@ fun HookScreen(onAnswer: () -> Unit, onHaveAccount: () -> Unit) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         Column(Modifier.weight(1f)) {
                             Txt("Time left to answer on time", 12, FontWeight.Medium, Brand.onHeroMuted)
-                            Display(formatCountdown(((m?.onTimeUntil ?: (now + 3 * 3_600_000L)) - now)), 28, Color.White)
+                            Display(formatCountdown(maxOf(0L, (m?.onTimeUntil ?: (now + 5 * 60_000L)) - now)), 28, Color.White)
                         }
                         Row(Modifier.height(32.dp).clip(CircleShape).background(Color(0x47061214)).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             AskIcon(Ico.Lock, Color.White, 14.dp, 2.2f)
@@ -106,6 +134,7 @@ fun HookScreen(onAnswer: () -> Unit, onHaveAccount: () -> Unit) {
                 Display("One question. Everyone. Answer to see.", 26)
                 AskButton("Answer today’s question", style = BtnStyle.Hero, onClick = onAnswer)
                 Txt("I already have an account", 14, FontWeight.Bold, c.link, Modifier.fillMaxWidth().tap(onClick = onHaveAccount), align = TextAlign.Center)
+                GuestLink()
             }
         }
     }

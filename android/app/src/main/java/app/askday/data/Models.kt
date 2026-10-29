@@ -181,7 +181,19 @@ data class Moment(
 enum class AskType(val label: String) { text("Text"), poll("Poll"), thisOrThat("This or that"), slider("1–10 slider"), member("Pick a member") }
 
 @Serializable
-data class AskResponse(val at: Long, val text: String? = null, val option: Int? = null, val value: Int? = null, val member: String? = null)
+data class AskResponse(
+    val at: Long,
+    val text: String? = null,
+    val option: Int? = null,
+    val value: Int? = null,
+    val member: String? = null,
+    /** Guess the group: which option you thought most people would pick. */
+    val guess: Int? = null,
+)
+
+/** Photo of the day: the back camera, plus an optional front-camera shot. */
+@Serializable
+data class DailyPhoto(val prompt: String, val back: String, val front: String? = null, val at: Long)
 
 /** A question a group member asks the rest of the group. Lasts 24 hours. */
 @Serializable
@@ -234,6 +246,16 @@ data class DB(
     var quick: MutableMap<String, String> = mutableMapOf(),
     /** Starter groups were added (once only, even if you leave them later). */
     var starterDone: Boolean = false,
+    /** The last 7 days of Askday moments, so you can still answer them (late). */
+    var pastMoments: MutableList<Moment> = mutableListOf(),
+    // ---- wave 1: daily rituals and games (all keyed by day "20261028")
+    var photos: MutableMap<String, DailyPhoto> = mutableMapOf(),
+    var moods: MutableMap<String, String> = mutableMapOf(),
+    var challenges: MutableMap<String, Long> = mutableMapOf(),
+    var battles: MutableMap<String, Int> = mutableMapOf(),
+    var doodles: MutableMap<String, String> = mutableMapOf(),
+    /** group id → best group-trivia score */
+    var trivia: MutableMap<String, Int> = mutableMapOf(),
 )
 
 fun qkey(groupId: String, questionId: String) = "$groupId/$questionId"

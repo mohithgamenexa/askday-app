@@ -42,7 +42,10 @@ object Social {
     private const val MIN = 60 * SEC
     private const val HOUR = 60 * MIN
     const val ASK_LIFETIME = 24 * HOUR
-    const val ON_TIME_WINDOW = 3 * HOUR
+    /** Answer within 5 minutes of the drop to be "on time". Later answers are marked late. */
+    const val ON_TIME_WINDOW = 5 * MIN
+    /** How far back you can still answer. */
+    const val CATCH_UP_DAYS = 7
     /** Free Asks per person per day (Askday+ would raise this). */
     const val FREE_ASKS_PER_DAY = 3
 
@@ -83,7 +86,12 @@ object Social {
         val m = Moment(key, DEMO_QUESTIONS[qIndex].text, qIndex, dropAt, dropAt + ON_TIME_WINDOW)
         // Five friends answer today: some on time, some late.
         val friends = friendsOf(d).shuffled(Engine.random).take(5)
-        for (f in friends) m.plan[f] = maxOf(now, dropAt) + rand(1 * MIN, 4 * HOUR)
+        // About half answer within the 5-minute window, the rest later (late).
+        for (f in friends) m.plan[f] = maxOf(now, dropAt) + if (Engine.random.nextBoolean()) rand(20 * SEC, 4 * MIN) else rand(6 * MIN, 4 * HOUR)
+        d.moment?.let { old ->
+            d.pastMoments.add(0, old)
+            while (d.pastMoments.size > CATCH_UP_DAYS) d.pastMoments.removeAt(d.pastMoments.lastIndex)
+        }
         d.moment = m
         d.momentQuestions[key] = m.text
     }
@@ -137,9 +145,13 @@ object Social {
 
     fun momentState(d: DB, now: Long): Moment? = d.moment
 
-    fun answerMoment(d: DB, text: String, now: Long, photo: String? = null, voice: String? = null, voiceMs: Long = 0) {
+    /** Today's moment, or one of the last 7 days by its day key. */
+    fun momentFor(d: DB, dayKey: String?): Moment? =
+        if (dayKey == null || dayKey == d.moment?.dayKey) d.moment else d.pastMoments.firstOrNull { it.dayKey == dayKey }
+
+    fun answerMoment(d: DB, text: String, now: Long, photo: String? = null, voice: String? = null, voiceMs: Long = 0, dayKey: String? = null) {
         val me = d.me ?: throw AskdayError("Sign in first.")
-        val m = d.moment ?: throw AskdayError("Today’s question hasn’t dropped yet.")
+        val m = momentFor(d, dayKey) ?: throw AskdayError("That question isn’t available anymore.")
         val clean = text.trim().replace(Regex("\\s+"), " ").take(280)
         if (clean.isEmpty() && photo == null && voice == null) throw AskdayError("Write an answer, or add a photo or voice note.")
         if (m.answers.any { it.uid == me }) throw AskdayError("You’ve already answered today.")
@@ -153,9 +165,9 @@ object Social {
         d.profile?.let { it.stats.answers += 1 }
     }
 
-    fun reactMoment(d: DB, answerUid: String, kind: Reaction): Boolean {
+    fun reactMoment(d: DB, answerUid: String, kind: Reaction, dayKey: String? = null): Boolean {
         val me = d.me ?: return false
-        val a = d.moment?.answers?.firstOrNull { it.uid == answerUid } ?: return false
+        val a = momentFor(d, dayKey)?.answers?.firstOrNull { it.uid == answerUid } ?: return false
         if (a.reactions[me] == kind) a.reactions.remove(me) else a.reactions[me] = kind
         return true
     }
@@ -177,7 +189,10 @@ object Social {
     }
 
     private fun friendResponse(a: Ask, g: GroupRec, uid: String, at: Long): AskResponse = when (a.type) {
-        AskType.poll, AskType.thisOrThat -> AskResponse(at, option = Engine.random.nextInt(a.options.size.coerceAtLeast(1)))
+        AskType.poll, AskType.thisOrThat -> {
+            val n = a.options.size.coerceAtLeast(1)
+            AskResponse(at, option = Engine.random.nextInt(n), guess = Engine.random.nextInt(n))
+        }
         AskType.slider -> AskResponse(at, value = 3 + Engine.random.nextInt(8))
         AskType.member -> AskResponse(at, member = g.memberIds.filter { it != uid }.let { it[Engine.random.nextInt(it.size)] })
         AskType.text -> AskResponse(at, text = SAMPLE_TEXT_RESPONSES[Engine.random.nextInt(SAMPLE_TEXT_RESPONSES.size)])

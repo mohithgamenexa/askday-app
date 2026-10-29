@@ -35,6 +35,9 @@ sealed interface Route {
     data object Memories : Route
     data object Plus : Route
     data object Contacts : Route
+    data object Photo : Route
+    data object Doodle : Route
+    data class Trivia(val groupId: String) : Route
     data class NewAsk(val groupId: String) : Route
     data class AskResults(val groupId: String, val askId: String) : Route
     data object EditProfile : Route
@@ -109,6 +112,9 @@ fun AskdayApp(askNotifications: () -> Unit = {}) {
                             Route.Memories -> MemoriesScreen()
                             Route.Plus -> PlusScreen()
                             Route.Contacts -> ContactsScreen()
+                            Route.Photo -> PhotoOfDayScreen()
+                            Route.Doodle -> DoodleScreen()
+                            is Route.Trivia -> TriviaScreen(r.groupId)
                             is Route.NewAsk -> NewAskScreen(r.groupId)
                             is Route.AskResults -> AskResultsScreen(r.groupId, r.askId)
                             Route.History -> HistoryScreen()

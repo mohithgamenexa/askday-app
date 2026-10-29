@@ -387,7 +387,15 @@ fun avatarColor(id: String): Color {
 
 @Composable
 fun rememberPhoto(path: String?): ImageBitmap? = remember(path) {
-    path?.let { runCatching { BitmapFactory.decodeFile(it)?.asImageBitmap() }.getOrNull() }
+    path?.let { p ->
+        runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(p, bounds)
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= 1080 || bounds.outHeight / (sample * 2) >= 1440) sample *= 2
+            BitmapFactory.decodeFile(p, BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+        }.getOrNull()
+    }
 }
 
 @Composable

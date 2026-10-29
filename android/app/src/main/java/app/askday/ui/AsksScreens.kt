@@ -112,6 +112,7 @@ private fun AskCardFace(g: GroupRec, a: Ask, onDone: () -> Unit) {
     val now = rememberNow(30_000)
     val author = db.person(a.uid)
     var option by remember(a.id) { mutableStateOf<Int?>(null) }
+    var guess by remember(a.id) { mutableStateOf<Int?>(null) }
     var member by remember(a.id) { mutableStateOf<String?>(null) }
     var value by remember(a.id) { mutableFloatStateOf(5f) }
     var text by rememberSaveable(a.id) { mutableStateOf("") }
@@ -123,7 +124,7 @@ private fun AskCardFace(g: GroupRec, a: Ask, onDone: () -> Unit) {
         AskType.text -> text.isNotBlank()
     }
     val submit = {
-        val r = AskResponse(System.currentTimeMillis(), text = text.takeIf { a.type == AskType.text }, option = option, value = if (a.type == AskType.slider) value.toInt() else null, member = member)
+        val r = AskResponse(System.currentTimeMillis(), text = text.takeIf { a.type == AskType.text }, option = option, value = if (a.type == AskType.slider) value.toInt() else null, member = member, guess = guess)
         error = act { Social.respondAsk(it, g.id, a.id, r) }
         if (error == null) {
             onDone()
@@ -190,6 +191,20 @@ private fun AskCardFace(g: GroupRec, a: Ask, onDone: () -> Unit) {
                 }
             }
             AskType.text -> AskField(text, { text = it.take(200) }, "Your answer…", singleLine = false, minHeight = 90.dp, radius = 16.dp, focusBorder = true, textSize = 16)
+        }
+        if ((a.type == AskType.poll || a.type == AskType.thisOrThat) && option != null) {
+            // Guess the group: predict the top pick for points.
+            Txt("Guess the group’s top pick (for points)", 13, FontWeight.Bold, c.muted)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                a.options.forEachIndexed { i, o ->
+                    val on = guess == i
+                    Box(
+                        Modifier.height(34.dp).clip(CircleShape).background(if (on) c.goldBg else c.chip).border(if (on) 1.5.dp else 0.dp, if (on) c.goldLine else Color.Transparent, CircleShape)
+                            .tap(label = "Guess $o") { guess = if (on) null else i }.padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Txt(o, 13, FontWeight.Bold, if (on) c.goldInk else c.muted) }
+                }
+            }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             AskIcon(Ico.Lock, c.muted, 14.dp)
@@ -333,6 +348,9 @@ fun AskResultsScreen(groupId: String, askId: String) {
                         val counts = a.options.indices.map { i -> a.responses.values.count { it.option == i } }
                         val myPick = a.responses[me]?.option
                         a.options.forEachIndexed { i, o -> ResultBar(o + if (myPick == i) " · you" else "", counts[i], total, counts[i] == counts.maxOrNull() && counts[i] > 0) }
+                        app.askday.data.Rituals.guessedRight(a, me)?.let { right ->
+                            Txt(if (right) "Your guess was right: +1 for knowing the group" else "Your guess missed this time", 13, FontWeight.Bold, if (right) c.okInk else c.muted)
+                        }
                     }
                     AskType.member -> {
                         val tally = a.responses.values.mapNotNull { it.member }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }

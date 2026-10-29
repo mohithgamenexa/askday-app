@@ -212,6 +212,7 @@ fun PhoneLoginScreen(onBack: () -> Unit) {
             ErrorText(error)
             if (step == "number") {
                 AskButton(if (busy) "Sending…" else "Send code", enabled = !busy && number.count(Char::isDigit) == 10) { send(false) }
+                GuestLink()
             } else {
                 AskButton(if (busy) "Checking…" else "Verify", enabled = !busy && code.length == 6) {
                     error = null
@@ -358,6 +359,7 @@ fun TodayScreen() {
                     }
                 }
             }
+            DailyRituals()
             if (groups.isNotEmpty()) Label("Your groups · ${toAnswer} to answer · next unlock ${nextUnlock?.let { shortLeft(it - now) } ?: "—"}")
 
             if (recapGroup != null) {

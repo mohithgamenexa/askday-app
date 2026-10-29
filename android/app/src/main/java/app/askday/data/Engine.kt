@@ -272,8 +272,9 @@ object Engine {
             d.theme = theme
         }
         d.me = uid
-        d.profile?.phone = phone
-        pendingPhone = phone
+        val number = phone.ifBlank { null } // guests have no phone number
+        d.profile?.phone = number
+        pendingPhone = number
     }
 
     /** Remembered between sign-in and profile setup, so the profile keeps the verified number. */
@@ -332,7 +333,8 @@ object Engine {
         if (clean.isEmpty() && photo == null && voice == null) throw AskdayError("Write an answer, or add a photo or voice note.")
         val g = d.groups[groupId] ?: throw AskdayError("This group isn’t available anymore.")
         val q = d.questions[groupId]?.get(questionId) ?: throw AskdayError("This question isn’t available anymore.")
-        if (g.currentId != q.id) throw AskdayError("You can only answer today’s question.")
+        // Today's question, or catch up on the last 7 days (late answers don't change the streak).
+        if (g.currentId != q.id && now - q.dropAt > 7 * 86_400_000L) throw AskdayError("That question is more than a week old.")
         addAnswer(d, g, q, uid, clean, now, photo, voice, voiceMs)
         // Friends who were waiting on you answer over the next minute or so.
         val sim = d.sim[qkey(groupId, questionId)] ?: return

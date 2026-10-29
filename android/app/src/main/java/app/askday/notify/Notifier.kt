@@ -36,7 +36,7 @@ object Notifier {
         val out = mutableListOf<Planned>()
         if (prefs.daily) {
             val next = app.askday.data.Social.momentDropFor(now).let { if (it <= now) app.askday.data.Social.momentDropFor(now + 86_400_000L) else it }
-            out += Planned(next, "It’s time to Askday", "Today’s question just dropped. Answer in the next 3 hours to be on time.", "")
+            out += Planned(next, "It’s time to Askday", "Today’s question just dropped. You have 5 minutes to answer on time.", "")
         }
         for (g in d.groups.values) {
             val next = g.nextDropAt

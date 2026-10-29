@@ -765,6 +765,7 @@ fun LeaderboardView(g: GroupRec) {
     val me = db.me
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         GroupGoalCard(g)
+        RewardedFreezeCard(g)
         Txt("The last 30 days in ${g.name}", 14, color = c.muted)
         for ((title, icon, list, unit) in listOf(
             Quad("Most consistent", Ico.Flame, board.consistent, "answers"),

@@ -387,7 +387,8 @@ fun TriviaScreen(groupId: String) {
             if (index >= questions.size) {
                 Display("$score/${questions.size}", 56, align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 Txt(if (score == questions.size) "You really listen to your friends." else "Pay more attention to the group chat.", 16, color = c.muted, align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                AskButton("Done") { Nav.pop() }
+                val activity = LocalContext.current as? android.app.Activity
+                AskButton("Done") { Nav.pop(); app.askday.services.Ads.atBreak(activity) }
                 return@Column
             }
             val q = questions[index]

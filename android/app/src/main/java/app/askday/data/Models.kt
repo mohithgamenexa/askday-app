@@ -279,6 +279,10 @@ data class DB(
     var showOnline: Boolean = true,
     /** An invite code from a link, joined once you're signed in. */
     var pendingInvite: String? = null,
+    /** Extra Asks earned by watching a rewarded ad, by day. */
+    var bonusAsks: MutableMap<String, Int> = mutableMapOf(),
+    /** group id → the day a streak freeze was last earned with a rewarded ad (one a day). */
+    var adFreezeDay: MutableMap<String, String> = mutableMapOf(),
 )
 
 /** A positive-only poll: "Who has the best laugh?" */

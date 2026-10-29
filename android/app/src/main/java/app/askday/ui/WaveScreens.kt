@@ -364,6 +364,29 @@ fun AlbumScreen(groupId: String) {
     }
 }
 
+/** Practice groups: watch a rewarded ad to earn a streak freeze (once a day, up to 2 saved). */
+@Composable
+fun RewardedFreezeCard(g: GroupRec) {
+    val c = colors
+    val db = LocalDB.current
+    val activity = LocalContext.current as? android.app.Activity
+    val today = Social.dayKey(System.currentTimeMillis())
+    if (g.cloud || g.freezes >= 2 || db.adFreezeDay[g.id] == today || !app.askday.services.Ads.rewardedOn) return
+    LaunchedEffect(Unit) { activity?.let { app.askday.services.Ads.preloadRewarded(it) } }
+    AskCard(gap = 8.dp, border = c.iceLine) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AskIcon(Ico.Snowflake, c.iceInk, 18.dp)
+            Txt("Earn a streak freeze", 15, FontWeight.Bold)
+        }
+        Txt("Watch a short ad and your group gets a freeze that protects the streak if someone misses a day.", 13, color = c.muted, lineHeight = 18.sp)
+        AskButton("Watch an ad", style = BtnStyle.Soft) {
+            app.askday.services.Ads.showRewarded(activity) {
+                act { d -> d.groups[g.id]?.let { it.freezes = minOf(2, it.freezes + 1) }; d.adFreezeDay[g.id] = today }
+            }
+        }
+    }
+}
+
 /** The group goal for this month, shown on the Board tab. */
 @Composable
 fun GroupGoalCard(g: GroupRec) {
@@ -654,6 +677,8 @@ fun YearScreen() {
         Triple("Your mood", y.topMood?.label ?: "—", "was your most common mood. Same time next year?"),
     )
     LaunchedEffect(i) { delay(5000); if (i + 1 < slides.size) i++ else Nav.pop() }
+    val breakActivity = LocalContext.current as? android.app.Activity
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { app.askday.services.Ads.atBreak(breakActivity) } }
     Box(Modifier.fillMaxSize().background(Brand.hero).clickable(remember { MutableInteractionSource() }, null) { if (i + 1 < slides.size) i++ else Nav.pop() }) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(28.dp), verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { for (n in slides.indices) Box(Modifier.weight(1f).height(3.dp).clip(CircleShape).background(if (n <= i) Color.White else Color.White.copy(alpha = 0.35f))) }

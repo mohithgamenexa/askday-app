@@ -204,7 +204,7 @@ object Social {
         val me = d.me ?: return 0
         val today = dayKey(now)
         val used = d.asks[groupId].orEmpty().count { it.uid == me && dayKey(it.createdAt) == today }
-        return (FREE_ASKS_PER_DAY - used).coerceAtLeast(0)
+        return (FREE_ASKS_PER_DAY + (d.bonusAsks[today] ?: 0) - used).coerceAtLeast(0)
     }
 
     fun createAsk(d: DB, groupId: String, type: AskType, question: String, options: List<String>, now: Long): String {

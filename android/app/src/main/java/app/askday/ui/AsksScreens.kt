@@ -90,6 +90,15 @@ fun AsksView(g: GroupRec) {
 
         AskButton("Ask the group", style = BtnStyle.Hero, icon = Ico.Plus) { Nav.push(Route.NewAsk(g.id)) }
         Txt("${Social.asksLeftToday(db, g.id, now)} of ${Social.FREE_ASKS_PER_DAY} Asks left today · Askday+ gets 5", 13, color = c.muted)
+        if (Social.asksLeftToday(db, g.id, now) == 0 && app.askday.services.Ads.rewardedOn) {
+            val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+            androidx.compose.runtime.LaunchedEffect(Unit) { activity?.let { app.askday.services.Ads.preloadRewarded(it) } }
+            AskButton("Watch an ad for 1 more Ask", style = BtnStyle.Soft) {
+                app.askday.services.Ads.showRewarded(activity) {
+                    act { d -> val day = Social.dayKey(System.currentTimeMillis()); d.bonusAsks[day] = (d.bonusAsks[day] ?: 0) + 1 }
+                }
+            }
+        }
 
         if (mine.isNotEmpty()) {
             Label("Your Asks")

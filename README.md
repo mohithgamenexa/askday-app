@@ -176,6 +176,111 @@ In Firebase › Remote Config, create the parameter **`ads_enabled`** (Boolean).
 
 ### Google Mobile Ads (AdMob)
 
+Ads only appear when the Remote Config switch **`ads_enabled`** is on, and Google's consent form is shown first where the law requires it (for example Europe and the UK). Each format also has its own switch, all on by default:
+
+| Format | Switch | Where it appears |
+|---|---|---|
+| Banner | `ads_banner` | Bottom of Today, History and Discover |
+| Native | `ads_native` | End of the Friends feed (once there are 3+ answers), and in Discover between sections, styled as a card labeled "Sponsored" |
+| Interstitial | `ads_interstitial` | Only at natural breaks: after a Who said it? result, after group trivia, and after closing the weekly recap or Year in Askday. Never while answering or during onboarding. |
+| Rewarded | `ads_rewarded` | "Watch an ad for 1 more Ask" when today's Asks run out, and "Earn a streak freeze" in practice groups (once a day per group, up to 2 saved) |
+
+Interstitials are capped by `interstitial_cooldown_minutes` (default 3) and `interstitial_daily_cap` (default 3). Change any of these in Remote Config without an app update.
+
+The app uses **Google's official test IDs**, which always show safe sample ads:
+
+| Format | Test ID |
+|---|---|
+| App ID | `ca-app-pub-3940256099942544~3347511713` |
+| Banner | `ca-app-pub-3940256099942544/6300978111` |
+| Interstitial | `ca-app-pub-3940256099942544/1033173712` |
+| Rewarded | `ca-app-pub-3940256099942544/5224354917` |
+| Native | `ca-app-pub-3940256099942544/2247696110` |
+
+**To switch to real ads later:**
+1. In admob.google.com, create the app and one ad unit of each type.
+2. Put your **app ID** in `android/gradle.properties` as `askday.admobAppId=ca-app-pub-…~…`.
+3. Put your four **ad unit IDs** in `android/app/src/main/java/app/askday/services/Ads.kt` (`AdUnits`).
+
+Never tap your own real ads; AdMob can suspend accounts for it. Keep the test IDs while developing.
+
+Rewarded streak freezes are only offered in practice groups. In real groups, freezes are kept by the server, and rewarding them needs AdMob's server-side verification, which can be added later.
+
+## Designed for version 3
+
+**Onboarding, inspired by BeReal**
+1. **Hook:** today's live global question, a countdown, and blurred answers from around the world.
+2. **Answer first:** write your first answer before creating an account. Text, photo or voice.
+3. **Make it yours:** phone number with a verification code, name, username, and birthday (13+ age check; the birthday is never shown).
+4. **Find friends:** contacts sync, your QR code, an invite link, and friend suggestions.
+5. **Notifications and vibe:** a clear reason for the notification prompt ("One ping a day. That's it."), then choose question packs.
+6. **Reveal:** land on today's answers, with your streak already started.
+
+**The Askday moment.** One global question for everyone at the same moment, at a different time each day, with a window to answer "on time." Late answers are allowed but marked late.
+
+**Friends.** Usernames, friend requests, contacts and suggestions. A daily feed of friends' answers to the global question (photo answers included), with reactions, comments, and a share button that turns an answer into a story card.
+
+**Asks: member questions in groups.**
+- Any member can post an Ask (1 a day free, 5 with Askday+).
+- Answer types: text, poll, this or that, a 1–10 slider, pick a member, and photo (Askday+).
+- Asks appear as a swipeable card stack (answer or skip), and results unlock after you answer.
+- Asks expire after 24 hours.
+- The asker is told "23 people answered your Ask." Notifications come as a digest, never one per Ask.
+- The top Ask can be promoted to become tomorrow's group question, credited to its author. The "Question master" badge comes from this.
+- Admins can set limits, pause Asks or approve them, and anyone can report one.
+
+**Bigger groups.** Up to 50 members (200 with Askday+). In big groups the streak survives if 80% answer, so one inactive member can't break it for everyone. Group leaderboards, and a rotating "Question master."
+
+**Discover.** The day's most-loved public answers worldwide (opt-in), trending Asks, and communities such as a college, a city or a shared interest.
+
+**Memories.** A calendar of every answer you've given, "1 year ago today" throwbacks, and a shareable Year in Askday every December.
+
+**Askday+.** The subscription, described under Revenue below.
+
+**Safety.** Report, block, a word filter, moderation for Discover, private-by-default answers, and extra protections for under-18s.
+
+---
+
+## Login, Firebase and ads
+
+### Phone number or guest login
+
+People sign in with their mobile number and a 6-digit code, or tap **Continue as guest** (on the first screen or the phone screen). Guests use Firebase anonymous sign-in: a real account ID with no phone number. **Turn on Anonymous** in Firebase › Authentication › Sign-in method for guest login to work. **Firebase Authentication sends the SMS**, and on many Android phones the code fills in by itself. "Send a new code" unlocks after 30 seconds. The first sign-in then asks for a name and photo.
+
+For now, groups and answers are still saved on the phone. Phone login identifies the person, ready for the online version. Signing in with a different number on the same phone clears the previous person's data, and so does logging out.
+
+### Set up Firebase (once)
+
+1. Create a project at console.firebase.google.com.
+2. **Add an Android app** with the package name `app.askday.android`.
+3. **Add both fingerprints** of the app's signing key (Project settings › Your apps › Add fingerprint):
+   - SHA-1: `AB:7C:C9:53:7D:75:B4:12:E0:0C:A5:49:17:9C:21:14:68:C0:99:A3`
+   - SHA-256: `D5:E2:6A:C1:C7:FE:04:BB:4A:43:E9:67:C5:27:37:EC:C4:2D:13:45:92:B0:B5:BC:22:63:F7:F2:EE:BE:87:0C`
+4. **Download `google-services.json`** and put it in `android/app/`. Firebase switches on automatically at the next build. Without the file the app still builds, and phone login shows a "needs Firebase" message.
+5. **Authentication › Sign-in method:** enable **Phone**.
+6. **Upgrade to the Blaze plan.** Phone verification is charged per SMS.
+7. **Protect against SMS fraud:** under Authentication › Settings › SMS region policy, allow only the countries you serve (for example India). Turn on **App Check** when you can.
+8. **Test without real SMS:** add test numbers under Authentication › Sign-in method › Phone, for example `+91 99999 00000` with code `123456`.
+
+The app is signed with a fixed test key, `android/app/askday-release.jks` (password `askday-test-key`), so these fingerprints stay the same on every build. That key is fine for testing and sharing. **For the Play Store, create your own key, keep it private, and add its fingerprints to Firebase too.**
+
+### Firebase Analytics
+
+These events are logged automatically: `login`, `sign_up`, `group_created`, `answer_submitted`, `reaction`, `reply_posted`, `chat_posted`, `nudge_sent`, `game_completed`, `recap_viewed`, `theme_changed`, `logout` and `account_deleted`. Analytics is linked to the account ID, never to the phone number.
+
+### Crashlytics
+
+Crashes are reported automatically once Firebase is set up, along with unexpected errors the app catches. Reports are linked to the account ID.
+
+### Remote Config: switching ads on and off
+
+In Firebase › Remote Config, create the parameter **`ads_enabled`** (Boolean).
+
+- `false` (the default, also used before Firebase is set up): no ads anywhere.
+- `true`: ads appear for everyone, without a new app release. The app checks for changes about once an hour.
+
+### Google Mobile Ads (AdMob)
+
 When `ads_enabled` is on, a banner labeled "Sponsored" appears below the groups on **Today** and at the end of **History**. Google's consent form is shown first in regions that require it, such as Europe and the UK.
 
 The app ships with **Google's official test IDs**, which show sample ads safely. To show real ads:

@@ -202,6 +202,7 @@ fun FriendsScreen() {
                     }
                 }
             }
+            if (ordered.size >= 3) NativeAdCard()
             if (m.answers.none { it.uid != me }) Txt("Your friends haven’t answered yet. Check back soon.", 14, color = c.muted, align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
     }
@@ -286,6 +287,7 @@ fun DiscoverScreen() {
                     Txt(a.text, 15, color = c.ink2, lineHeight = 21.sp)
                 }
             }
+            NativeAdCard()
             Label("Trending Asks")
             AskCard {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -304,6 +306,7 @@ fun DiscoverScreen() {
                     }
                 }
             }
+            AdBanner()
         }
     }
 }

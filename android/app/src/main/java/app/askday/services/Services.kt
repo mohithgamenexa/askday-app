@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Ad unit IDs. These are Google's official test IDs: replace them with your own from the AdMob console. */
 object AdIds {
-    const val BANNER = "ca-app-pub-3940256099942544/6300978111"
+    const val BANNER = AdUnits.BANNER
 }
 
 /**
@@ -46,7 +46,7 @@ object Services {
         if (!firebaseReady) return
         val rc = FirebaseRemoteConfig.getInstance()
         rc.setConfigSettingsAsync(FirebaseRemoteConfigSettings.Builder().setMinimumFetchIntervalInSeconds(3600).build())
-        rc.setDefaultsAsync(mapOf<String, Any>("ads_enabled" to false))
+        rc.setDefaultsAsync(mapOf<String, Any>("ads_enabled" to false) + Ads.DEFAULTS)
         rc.fetchAndActivate().addOnCompleteListener { _adsEnabled.value = rc.getBoolean("ads_enabled") }
     }
 
@@ -87,7 +87,12 @@ object Services {
         val consent = UserMessagingPlatform.getConsentInformation(activity)
         val begin = {
             if (consent.canRequestAds() && adsStarted.compareAndSet(false, true)) {
-                MobileAds.initialize(activity) { _adsReady.value = true }
+                MobileAds.initialize(activity) {
+                    _adsReady.value = true
+                    // Have a full-screen and a rewarded ad ready for when they're needed.
+                    Ads.preloadInterstitial(activity)
+                    Ads.preloadRewarded(activity)
+                }
             }
         }
         consent.requestConsentInfoUpdate(

@@ -415,7 +415,8 @@ fun GameScreen(groupId: String, questionId: String) {
                 Display(if (score == rounds.size) "Mind reader!" else if (score * 2 >= rounds.size) "You know your people." else "Plot twist, huh?", 28, align = TextAlign.Center)
                 Txt(if (score == rounds.size) "A perfect score. That’s a badge." else "Come back tomorrow for another round.", 15, color = c.muted, align = TextAlign.Center)
                 Box(Modifier.height(12.dp))
-                AskButton("Back to answers") { Nav.pop() }
+                val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+                AskButton("Back to answers") { Nav.pop(); app.askday.services.Ads.atBreak(activity) }
             }
             return@AskScreen
         }
@@ -524,6 +525,8 @@ fun RecapScreen(groupId: String) {
     val nameOf = { id: String -> if (id == me) "You" else db.person(id)?.name ?: "A friend" }
 
     val slideCount = if (r == null) 0 else 5
+    val breakActivity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { app.askday.services.Ads.atBreak(breakActivity) } }
     LaunchedEffect(groupId) { app.askday.services.Services.log("recap_viewed") }
     @Composable
     fun Slide(n: Int) {

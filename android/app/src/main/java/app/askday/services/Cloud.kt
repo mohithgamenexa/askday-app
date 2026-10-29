@@ -137,6 +137,8 @@ object Cloud {
         db.collection("users").document(uid).collection("private").document("me").delete()
         db.collection("users").document(uid).delete()
         FirebaseStorage.getInstance().reference.child("avatars/$uid.jpg").delete()
+        com.google.firebase.functions.FirebaseFunctions.getInstance("asia-south1").getHttpsCallable("unregisterPhone").call()
+        FriendsCloud.stop()
         lastSent = null
         lastPhoto = null
     }

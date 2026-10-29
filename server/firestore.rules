@@ -19,7 +19,30 @@ service cloud.firestore {
       match /private/{doc} {
         allow read, write: if isMe(uid);
       }
+
+      // Your friends. Written for both people when a request is accepted.
+      match /friends/{fid} {
+        allow read: if isMe(uid);
+        // I accept their request: add them to my list…
+        allow create: if (isMe(uid) && exists(/databases/$(database)/documents/friendRequests/$(fid + '_' + uid)))
+          // …and add me to theirs.
+          || (signedIn() && request.auth.uid == fid && exists(/databases/$(database)/documents/friendRequests/$(uid + '_' + fid)));
+        // Either of you can end the friendship.
+        allow delete: if isMe(uid) || (signedIn() && request.auth.uid == fid);
+      }
     }
+
+    // Friend requests: id is "from_to". Only the two people involved can see one.
+    match /friendRequests/{id} {
+      allow read: if signedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.to != request.auth.uid
+        && id == request.auth.uid + '_' + request.resource.data.to;
+      allow delete: if signedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+    }
+
+    // phoneHashes is only touched by Cloud Functions; the app can't read or write it.
 
     // Usernames are unique: each one points to exactly one account and can't be taken over.
     match /usernames/{name} {

@@ -515,6 +515,16 @@ fun MeExtras() {
         Txt("Your status", 14, FontWeight.Bold)
         AskField(status, { status = it.take(60); val v = status; act { d -> d.status = v.ifBlank { null } } }, "Currently… studying for exams", textSize = 15)
     }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Txt("Show when I’m online", 15, FontWeight.Medium)
+            Txt("Friends see “Online now” or when you were last active.", 12, color = c.muted)
+        }
+        AskToggle(db.showOnline, "Show when I’m online") { on ->
+            act { it.showOnline = on }
+            app.askday.services.FriendsCloud.setShowOnline(on)
+        }
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MeLink("Insights", Ico.Spark, Route.Insights, Modifier.weight(1f))
         MeLink("Time capsule", Ico.Clock, Route.Capsule, Modifier.weight(1f))

@@ -124,12 +124,14 @@ fun ContactsList(compact: Boolean = false) {
         return
     }
 
-    AskCard(gap = 8.dp) {
+    if (Services.firebaseReady && app.askday.services.PhoneAuth.currentUid != null) {
+        ContactMatches(list.map { it.phone }) { n -> list.firstOrNull { it.phone == n }?.name ?: "" }
+    } else AskCard(gap = 8.dp) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AskIcon(Ico.Spark, Brand.accent, 18.dp)
             Txt("On Askday", 15, FontWeight.Bold)
         }
-        Txt("Seeing which contacts already use Askday, and who’s online, arrives with the online version. For now, invite them below.", 13, color = c.muted, lineHeight = 18.sp)
+        Txt("Sign in to see which of your contacts already use Askday.", 13, color = c.muted, lineHeight = 18.sp)
     }
 
     AskField(query, { query = it.take(40) }, "Search ${list.size} contacts")

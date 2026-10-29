@@ -45,6 +45,7 @@ sealed interface Route {
     data object Capsule : Route
     data object Year : Route
     data object LinkPhone : Route
+    data object AddFriends : Route
     data class NewAsk(val groupId: String) : Route
     data class AskResults(val groupId: String, val askId: String) : Route
     data object EditProfile : Route
@@ -88,6 +89,7 @@ fun AskdayApp(askNotifications: () -> Unit = {}) {
             androidx.compose.runtime.LaunchedEffect(uid, db.me) {
                 if (uid != null && db.me != uid) act { Engine.signIn(it, uid, app.askday.services.PhoneAuth.currentPhone ?: "") }
                 app.askday.services.Services.setUser(uid)
+                if (uid != null && db.me == uid) app.askday.services.FriendsCloud.start(uid, db.showOnline) else app.askday.services.FriendsCloud.stop()
             }
             // Before sign-in: hook → answer first → phone. After: name and photo → username and birthday → friends → vibe.
             var step by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("hook") }
@@ -128,6 +130,7 @@ fun AskdayApp(askNotifications: () -> Unit = {}) {
                             Route.Insights -> InsightsScreen()
                             Route.Capsule -> CapsuleScreen()
                             Route.Year -> YearScreen()
+                            Route.AddFriends -> AddFriendsScreen()
                             Route.LinkPhone -> PhoneLoginScreen(onBack = { Nav.pop() }, onDone = { Nav.pop() })
                             is Route.NewAsk -> NewAskScreen(r.groupId)
                             is Route.AskResults -> AskResultsScreen(r.groupId, r.askId)

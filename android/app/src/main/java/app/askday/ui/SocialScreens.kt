@@ -119,6 +119,7 @@ fun FriendsScreen() {
                     Txt("Invite contacts", 13, FontWeight.Bold, c.btnFg)
                 }
             }
+            RealFriendsSection()
             DuosAndFriends()
             // Today, then the last 7 days you can still answer (late).
             val days = listOfNotNull(db.moment) + db.pastMoments

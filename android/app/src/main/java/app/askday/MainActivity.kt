@@ -70,6 +70,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Online status: active while Askday is on screen, away when it isn't.
+    override fun onStart() {
+        super.onStart()
+        app.askday.services.FriendsCloud.setActive(true)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        app.askday.services.FriendsCloud.setActive(false)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         openFromNotification(intent)

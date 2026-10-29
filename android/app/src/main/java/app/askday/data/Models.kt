@@ -273,6 +273,8 @@ data class DB(
     var birthdays: MutableMap<String, String> = mutableMapOf(),
     /** A short "currently…" line on your profile. */
     var status: String? = null,
+    /** Let friends see when you're online. */
+    var showOnline: Boolean = true,
 )
 
 /** A positive-only poll: "Who has the best laugh?" */

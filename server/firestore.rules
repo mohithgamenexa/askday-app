@@ -42,7 +42,56 @@ service cloud.firestore {
       allow delete: if signedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
     }
 
-    // phoneHashes is only touched by Cloud Functions; the app can't read or write it.
+    // phoneHashes and invites are only touched by Cloud Functions; the app can't read or write them.
+
+    // Real groups. Only members can see a group; only Cloud Functions change it.
+    match /groups/{gid} {
+      function group() { return get(/databases/$(database)/documents/groups/$(gid)).data; }
+      function isMember() { return signedIn() && request.auth.uid in group().memberIds; }
+
+      allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
+      allow write: if false;
+
+      match /nudges/{nid} {
+        allow read: if isMember() && resource.data.to == request.auth.uid;
+        allow write: if false;
+      }
+
+      match /questions/{qid} {
+        allow read: if isMember();
+        allow write: if false;
+
+        function question() { return get(/databases/$(database)/documents/groups/$(gid)/questions/$(qid)).data; }
+        function iAnswered() { return exists(/databases/$(database)/documents/groups/$(gid)/questions/$(qid)/answers/$(request.auth.uid)); }
+        function canSeeAll() { return isMember() && iAnswered() && question().unlocked == true; }
+
+        // Answers stay locked: you see your own, and everyone's only after you answer and it unlocks.
+        match /answers/{uid} {
+          allow read: if (isMember() && uid == request.auth.uid) || canSeeAll();
+          allow create: if isMember() && uid == request.auth.uid
+            && request.resource.data.keys().hasOnly(['text', 'photoUrl', 'voiceUrl', 'voiceMs', 'createdAt', 'reactions', 'public'])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() <= 280
+            && request.resource.data.reactions.size() == 0;
+          // Reactions: you can only change your own.
+          allow update: if canSeeAll()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+            && request.resource.data.reactions.diff(resource.data.reactions).affectedKeys().hasOnly([request.auth.uid]);
+          allow delete: if false;
+        }
+
+        // Replies and chat: after the answers unlock.
+        match /comments/{cid} {
+          allow read: if canSeeAll();
+          allow create: if canSeeAll()
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 280;
+          allow update, delete: if false;
+        }
+      }
+    }
 
     // Usernames are unique: each one points to exactly one account and can't be taken over.
     match /usernames/{name} {

@@ -11,5 +11,17 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
       allow delete: if request.auth != null && file == request.auth.uid + '.jpg';
     }
+
+    // Photos and voice notes on answers: only group members can see them; you can only upload your own.
+    match /answers/{gid}/{qid}/{file} {
+      function isMember() {
+        return request.auth != null
+          && request.auth.uid in firestore.get(/databases/(default)/documents/groups/$(gid)).data.memberIds;
+      }
+      allow read: if isMember();
+      allow write: if isMember()
+        && file.matches(request.auth.uid + '[.](jpg|m4a)')
+        && request.resource.size < 10 * 1024 * 1024;
+    }
   }
 }

@@ -87,6 +87,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openFromNotification(intent: Intent?) {
+        // Invite link: https://ask-day.web.app/j/CODE. Joined right away, or after you sign in.
+        intent?.data?.takeIf { it.host == "ask-day.web.app" && it.path?.startsWith("/j/") == true }?.let { uri ->
+            val code = uri.path!!.removePrefix("/j/").filter(Char::isLetterOrDigit).take(6).uppercase()
+            if (code.length == 6) Store.update { it.pendingInvite = code; true }
+            return
+        }
         val groupId = intent?.getStringExtra("groupId") ?: return
         Nav.tab(Route.Today)
         if (groupId.isNotEmpty()) Nav.push(Route.Group(groupId))

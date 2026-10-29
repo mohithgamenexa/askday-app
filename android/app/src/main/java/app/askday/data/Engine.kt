@@ -205,6 +205,7 @@ object Engine {
     fun tick(d: DB, now: Long): Boolean {
         var dirty = false
         for (g in d.groups.values) {
+            if (g.cloud) continue // real groups are run by the server
             val next = g.nextDropAt
             if (next != null && next <= now) {
                 dropQuestion(d, g, now)
@@ -401,6 +402,7 @@ object Engine {
 
     /** Demo shortcut: release the next question now instead of waiting for tomorrow. */
     fun dropNextNow(d: DB, groupId: String, now: Long) {
+        if (d.groups[groupId]?.cloud == true) return // the server decides when real groups get questions
         d.groups[groupId]?.let { dropQuestion(d, it, now) }
     }
 

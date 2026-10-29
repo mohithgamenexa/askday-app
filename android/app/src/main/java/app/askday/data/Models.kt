@@ -74,6 +74,8 @@ data class GroupRec(
     var nextQuestionBy: String? = null,
     /** Joined automatically after onboarding, with sample members, so the app is never empty. */
     var starter: Boolean = false,
+    /** A real group on the server (B3). The phone mirrors it; the server runs drops, unlocks and streaks. */
+    var cloud: Boolean = false,
 )
 
 @Serializable
@@ -275,6 +277,8 @@ data class DB(
     var status: String? = null,
     /** Let friends see when you're online. */
     var showOnline: Boolean = true,
+    /** An invite code from a link, joined once you're signed in. */
+    var pendingInvite: String? = null,
 )
 
 /** A positive-only poll: "Who has the best laugh?" */

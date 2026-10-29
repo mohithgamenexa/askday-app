@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Join my group on Askday</title>
+<style>
+  :root { --bg:#F5FAF9; --ink:#0E1A1C; --muted:#56676B; --card:#fff; --line:#E1ECEA; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#061214; --ink:#EFFAF8; --muted:#93A9A6; --card:#0E1C1E; --line:#1C3134; } }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .card { width:min(92vw,380px); background:var(--card); border:1px solid var(--line); border-radius:28px; padding:28px; text-align:center; }
+  .logo { width:64px; height:64px; margin:0 auto 16px; border-radius:20px; display:grid; place-items:center; color:#fff; font-size:34px; font-weight:800;
+          background:linear-gradient(140deg,#0A8A80,#0E7FA8 55%,#2563EB); }
+  h1 { font-size:24px; margin:0 0 8px; }
+  p { color:var(--muted); margin:0 0 20px; line-height:1.45; }
+  .code { font:700 28px ui-monospace,monospace; letter-spacing:4px; padding:12px; border:1.5px dashed var(--line); border-radius:16px; margin-bottom:20px; }
+  a.btn { display:block; padding:16px; border-radius:18px; color:#fff; text-decoration:none; font-weight:700;
+          background:linear-gradient(140deg,#0A8A80,#0E7FA8 55%,#2563EB); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">?</div>
+  <h1>You’re invited to Askday</h1>
+  <p>One question a day, answered together. Open the app to join the group, or enter this code in Groups › New group › Join.</p>
+  <div class="code" id="code">······</div>
+  <a class="btn" id="open" href="#">Open in Askday</a>
+</div>
+<script>
+  const code = (location.pathname.split("/j/")[1] || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase();
+  document.getElementById("code").textContent = code || "······";
+  document.getElementById("open").href = "intent://ask-day.web.app/j/" + code + "#Intent;scheme=https;package=app.askday.android;end";
+</script>
+</body>
+</html>

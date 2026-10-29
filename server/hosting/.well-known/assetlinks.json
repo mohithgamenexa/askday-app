@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.askday.android",
+      "sha256_cert_fingerprints": ["D5:E2:6A:C1:C7:FE:04:BB:4A:43:E9:67:C5:27:37:EC:C4:2D:13:45:92:B0:B5:BC:22:63:F7:F2:EE:BE:87:0C"]
+    }
+  }
+]

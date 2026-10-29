@@ -91,6 +91,8 @@ dependencies {
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-database")
     implementation("com.google.firebase:firebase-functions")
+    // Loads photos from the server (real group members, photo answers)
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Google Mobile Ads (AdMob) and Google's consent form for regions that require it
     implementation("com.google.android.gms:play-services-ads:23.6.0")

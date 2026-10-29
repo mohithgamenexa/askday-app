@@ -430,7 +430,10 @@ fun Avatar(
                 .then(if (ring) Modifier.border(2.dp, c.surface, CircleShape) else Modifier),
             contentAlignment = Alignment.Center,
         ) {
-            if (image != null && !dashed) {
+            if (photo != null && photo.startsWith("http") && !dashed) {
+                // Real people's photos come from the server.
+                coil.compose.AsyncImage(photo, null, Modifier.size(size), contentScale = ContentScale.Crop)
+            } else if (image != null && !dashed) {
                 Image(image, null, Modifier.size(size), contentScale = ContentScale.Crop)
             } else {
                 Txt(

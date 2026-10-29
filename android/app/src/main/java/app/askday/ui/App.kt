@@ -89,7 +89,23 @@ fun AskdayApp(askNotifications: () -> Unit = {}) {
             androidx.compose.runtime.LaunchedEffect(uid, db.me) {
                 if (uid != null && db.me != uid) act { Engine.signIn(it, uid, app.askday.services.PhoneAuth.currentPhone ?: "") }
                 app.askday.services.Services.setUser(uid)
-                if (uid != null && db.me == uid) app.askday.services.FriendsCloud.start(uid, db.showOnline) else app.askday.services.FriendsCloud.stop()
+                if (uid != null && db.me == uid) {
+                    app.askday.services.FriendsCloud.start(uid, db.showOnline)
+                    app.askday.services.GroupsCloud.start(uid)
+                } else {
+                    app.askday.services.FriendsCloud.stop()
+                    app.askday.services.GroupsCloud.stop()
+                }
+            }
+            // An invite link was opened: join once signed in and onboarded.
+            val invite = db.pendingInvite
+            androidx.compose.runtime.LaunchedEffect(invite, uid, db.onboarded) {
+                if (invite != null && uid != null && db.me == uid && db.onboarded) {
+                    app.askday.services.GroupsCloud.joinGroup(invite) { gid, _ ->
+                        act { it.pendingInvite = null }
+                        if (gid != null) { Nav.tab(Route.Groups); Nav.push(Route.Group(gid)) }
+                    }
+                }
             }
             // Before sign-in: hook → answer first → phone. After: name and photo → username and birthday → friends → vibe.
             var step by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("hook") }

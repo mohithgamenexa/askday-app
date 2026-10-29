@@ -80,7 +80,23 @@ fun NewGroupScreen() {
     var error by remember { mutableStateOf<String?>(null) }
     val haptics = rememberHaptics()
     val db = LocalDB.current
-    val invite = created?.let { db.groups[it]?.inviteCode }
+    val online = app.askday.services.Services.firebaseReady && app.askday.services.PhoneAuth.currentUid != null
+    var kind by rememberSaveable { mutableStateOf(if (online) "real" else "practice") }
+    var realCode by rememberSaveable { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val invite = realCode ?: created?.let { db.groups[it]?.inviteCode }
+    val link = invite?.let { app.askday.services.GroupsCloud.inviteLink(it) }
+    val share = { pkg: String? ->
+        if (link != null) {
+            val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(android.content.Intent.EXTRA_TEXT, "Join my group “$name” on Askday: one question a day, answered together. $link")
+            if (pkg != null) send.setPackage(pkg)
+            runCatching { context.startActivity(if (pkg != null) send else android.content.Intent.createChooser(send, "Invite friends")) }
+                .onFailure { runCatching { context.startActivity(android.content.Intent.createChooser(send.setPackage(null), "Invite friends")) } }
+            app.askday.services.Services.log("invite_shared", "via" to (pkg ?: "sheet"))
+        }
+    }
 
     AskScreen {
         Column(
@@ -100,12 +116,27 @@ fun NewGroupScreen() {
                     Txt("It’s the last part of the invite link your friend sent you.", 13, color = c.muted)
                 }
                 ErrorText(error)
-                AskButton("Join group", enabled = code.length >= 4) {
-                    error = "Joining with a code needs the online version of Askday. For now, create a group and sample friends will join you."
+                AskButton(if (busy) "Joining…" else "Join group", enabled = code.length == 6 && !busy) {
+                    if (!online) {
+                        error = "Sign in to join real groups."
+                    } else {
+                        busy = true
+                        error = null
+                        app.askday.services.GroupsCloud.joinGroup(code) { gid, err ->
+                            busy = false
+                            if (gid != null) { haptics(true); Nav.pop(); Nav.push(Route.Group(gid)) } else error = err
+                        }
+                    }
                 }
                 return@Column
             }
 
+            if (online) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Segmented(listOf(Triple("real", "Real group", null), Triple("practice", "Practice group", null)), kind) { if (created == null) kind = it }
+                    Txt(if (kind == "real") "Invite your friends with a link. Answers, streaks and freezes are shared for real." else "Sample friends join so you can try everything on your own.", 13, color = c.muted, lineHeight = 18.sp)
+                }
+            }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Txt("Group name", 14, FontWeight.Bold)
                 AskField(name, { if (created == null) name = it.take(40) }, "College Crew", focusBorder = true)
@@ -133,7 +164,7 @@ fun NewGroupScreen() {
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (kind == "practice") Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Txt("How big is the group?", 14, FontWeight.Bold)
                 Segmented(listOf(Triple(4, "Small · 5", null), Triple(8, "Medium · 9", null), Triple(12, "Big · 13", null)), size) { if (created == null) size = it }
                 Txt(if (size >= 9) "Big groups keep their streak when 80% answer." else "Small groups need everyone to keep the streak.", 13, color = c.muted)
@@ -142,28 +173,41 @@ fun NewGroupScreen() {
             AskCard(gap = 14.dp) {
                 Txt("Invite friends", 14, FontWeight.Bold)
                 Txt(
-                    if (created != null) "Real invites work once Askday is online. For now, sample friends have joined your group."
-                    else "Your invite code appears here once the group is created.",
+                    when {
+                        created != null && kind == "real" -> "Share this link. Anyone who taps it joins the group."
+                        created != null -> "Sample friends have joined your practice group."
+                        kind == "real" -> "Your invite link appears here once the group is created."
+                        else -> "Practice groups use sample friends, no invites needed."
+                    },
                     13, color = c.muted, lineHeight = 18.sp,
                 )
                 Row(
                     Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(12.dp)).background(c.bg).padding(start = 14.dp, end = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Txt("askday.app/j/${invite ?: "······"}", 15, FontWeight.Medium, if (invite != null) c.ink else c.muted, Modifier.weight(1f), maxLines = 1)
-                    Box(Modifier.height(36.dp).clip(RoundedCornerShape(10.dp)).background(c.btnBg.copy(alpha = 0.45f)).padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                    Txt("ask-day.web.app/j/${invite ?: "······"}", 15, FontWeight.Medium, if (invite != null) c.ink else c.muted, Modifier.weight(1f), maxLines = 1)
+                    Box(
+                        Modifier.height(36.dp).clip(RoundedCornerShape(10.dp)).background(if (link != null) c.btnBg else c.btnBg.copy(alpha = 0.45f))
+                            .tap(enabled = link != null, label = "Copy invite link") {
+                                val cm = context.getSystemService(android.content.ClipboardManager::class.java)
+                                cm?.setPrimaryClip(android.content.ClipData.newPlainText("Askday invite", link))
+                                haptics(false)
+                            }.padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Txt("Copy", 13, FontWeight.Bold, c.btnFg)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for ((label, icon) in listOf("WhatsApp" to Ico.WhatsApp, "Instagram" to Ico.Instagram, "Messages" to Ico.Chat, "More" to Ico.More)) {
+                    for ((label, icon, pkg) in listOf(Triple("WhatsApp", Ico.WhatsApp, "com.whatsapp"), Triple("Instagram", Ico.Instagram, "com.instagram.android"), Triple("Messages", Ico.Chat, "com.google.android.apps.messaging"), Triple("More", Ico.More, null))) {
+                        val on = link != null
                         Column(
-                            Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(12.dp)).background(c.bg),
+                            Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(12.dp)).background(c.bg).tap(enabled = on, label = "Share on $label") { share(pkg) },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
                         ) {
-                            AskIcon(icon, c.ink.copy(alpha = 0.5f), 22.dp)
-                            Txt(label, 12, FontWeight.Medium, c.ink.copy(alpha = 0.5f))
+                            AskIcon(icon, c.ink.copy(alpha = if (on) 1f else 0.5f), 22.dp)
+                            Txt(label, 12, FontWeight.Medium, c.ink.copy(alpha = if (on) 1f else 0.5f))
                         }
                     }
                 }
@@ -177,7 +221,16 @@ fun NewGroupScreen() {
                     Nav.push(Route.Group(id))
                 }
             } else {
-                AskButton("Create group", enabled = name.isNotBlank()) {
+                AskButton(if (busy) "Creating…" else "Create group", enabled = name.isNotBlank() && !busy) {
+                    if (kind == "real") {
+                        busy = true
+                        error = null
+                        app.askday.services.GroupsCloud.createGroup(name.trim(), slot) { gid, code, err ->
+                            busy = false
+                            if (gid != null) { haptics(true); created = gid; realCode = code } else error = err
+                        }
+                        return@AskButton
+                    }
                     var id: String? = null
                     error = act { id = Engine.createGroup(it, name, slot, System.currentTimeMillis(), size) }
                     if (id != null) {
@@ -342,7 +395,7 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
                 if (canAnswer && target != null && !q.unlocked) {
                     Row(
                         Modifier.tap(enabled = nudged[target] != true) {
-                            val err = act { Engine.nudge(it, g.id, target, System.currentTimeMillis()) }
+                            val err = if (g.cloud) { app.askday.services.GroupsCloud.nudge(g.id, target) {}; act { d -> d.groups[g.id]?.nudged?.set(target, q.id) } } else act { Engine.nudge(it, g.id, target, System.currentTimeMillis()) }
                             if (err == null) {
                                 haptics(true)
                                 nudged[target] = true
@@ -399,6 +452,11 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
         ErrorText(error)
         if (canAnswer && myAnswer == null) {
             AskButton("Lock in my answer", icon = Ico.Lock, enabled = text.isNotBlank() || !attach.isEmpty) {
+                if (g.cloud) {
+                    error = null
+                    app.askday.services.GroupsCloud.submitAnswer(g.id, q.id, text, attach.photo, attach.voice, attach.voiceMs) { err -> error = err; if (err == null) haptics(true) }
+                    return@AskButton
+                }
                 error = act { Engine.submitAnswer(it, g.id, q.id, me, text, System.currentTimeMillis(), attach.photo, attach.voice, attach.voiceMs) }
                 if (error == null) {
                     haptics(true)
@@ -545,7 +603,8 @@ private fun AnswersView(g: GroupRec, q: QuestionRec, me: String) {
                 AskField(draft, { draft = it.take(280) }, replyTo?.let { "Reply to ${nameOf(it.uid)}…" } ?: "Say something to the group…", Modifier.weight(1f), radius = 24.dp, textSize = 15)
                 GradientBox(
                     Modifier.size(48.dp).tap(enabled = draft.isNotBlank(), label = "Send") {
-                        error = act { Engine.postComment(it, g.id, q.id, me, draft, replyTo?.id, System.currentTimeMillis()) }
+                        error = if (g.cloud) { val t = draft; app.askday.services.GroupsCloud.comment(g.id, q.id, t, replyTo?.id) { err -> if (err != null) error = err }; null }
+                        else act { Engine.postComment(it, g.id, q.id, me, draft, replyTo?.id, System.currentTimeMillis()) }
                         app.askday.services.Services.log(if (replyTo != null) "reply_posted" else "chat_posted")
                         replyTo?.let { open[it.id] = true }
                         draft = ""
@@ -612,7 +671,7 @@ private fun AnswerCard(
             }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) { AskIcon(Ico.Send, c.muted, 14.dp) }
             for (k in Reaction.entries) {
                 ReactionButton(k, a.reactions.values.count { it == k }, a.reactions[me] == k) {
-                    act { Engine.toggleReaction(it, g.id, q.id, a.id, me, k) }?.let(onError)
+                    if (g.cloud) app.askday.services.GroupsCloud.react(g.id, q.id, a.id, k, a.reactions[me]) else act { Engine.toggleReaction(it, g.id, q.id, a.id, me, k) }?.let(onError)
                     app.askday.services.Services.log("reaction", "kind" to k.name)
                 }
             }
@@ -688,6 +747,7 @@ fun QuestionMasterCard(g: GroupRec, me: String) {
             AskField(draft, { draft = it.take(140) }, "What do you want to ask everyone?", textSize = 15)
             ErrorText(error)
             AskButton("Set tomorrow’s question", enabled = draft.trim().length >= 5) {
+                if (g.cloud) { app.askday.services.GroupsCloud.setNextQuestion(g.id, draft) { err -> error = err }; return@AskButton }
                 error = act { Engine.setNextQuestion(it, g.id, draft) }
                 if (error == null) app.askday.services.Services.log("question_master_set")
             }

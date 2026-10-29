@@ -379,7 +379,7 @@ fun ManageGroupsScreen() {
     }
     leaving?.let { id ->
         ConfirmDialog("Leave ${db.groups[id]?.name}?", "This deletes the group and its answers from this phone.", "Leave group", { leaving = null }) {
-            act { Engine.leaveGroup(it, id) }
+            if (db.groups[id]?.cloud == true) app.askday.services.GroupsCloud.leaveGroup(id) else act { Engine.leaveGroup(it, id) }
             leaving = null
         }
     }

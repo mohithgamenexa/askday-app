@@ -179,6 +179,10 @@ private fun Chip(icon: Ico, label: String, active: Boolean = false, onClick: () 
 /** A saved photo, cropped to fit, with rounded corners. */
 @Composable
 fun PhotoView(path: String?, modifier: Modifier = Modifier) {
+    if (path != null && path.startsWith("http")) {
+        coil.compose.AsyncImage(path, "Photo answer", modifier.clip(RoundedCornerShape(16.dp)), contentScale = ContentScale.Crop)
+        return
+    }
     val image = rememberPhoto(path) ?: return
     Image(image, "Photo answer", modifier.clip(RoundedCornerShape(16.dp)), contentScale = ContentScale.Crop)
 }
@@ -196,12 +200,13 @@ fun VoicePill(path: String, ms: Long) {
             if (p != null) {
                 p.release()
                 player = null
-            } else if (File(path).exists()) {
+            } else if (path.startsWith("http") || File(path).exists()) {
+                // Voice notes from the server stream; ones on the phone play straight away.
                 player = MediaPlayer().apply {
                     setDataSource(path)
                     setOnCompletionListener { it.release(); player = null }
-                    prepare()
-                    start()
+                    setOnPreparedListener { it.start() }
+                    prepareAsync()
                 }
             }
         }.padding(horizontal = 14.dp),

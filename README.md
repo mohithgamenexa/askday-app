@@ -18,7 +18,11 @@ Askday is a daily question app. Every day a question drops, you answer it, and o
 | **Version 2: groups, streaks, freezes, badges, reactions, game, recap, themes** | Built in the Android app (works offline, with sample friends) |
 | **Ocean color palette** (teal into blue, warm coral and sun accents) | Built in the Android app and the design |
 | **Phone login, Firebase Analytics, Crashlytics, Remote Config, AdMob ads** | Built in the Android app (switches on once `google-services.json` is added) |
-| **Version 3: onboarding, global moment, friends, Asks, Discover, Memories, Askday+** | Designed (14 screens on the canvas), not built yet |
+| **Phase A: new onboarding, global Askday moment, Friends feed, Asks, Memories, Askday+ screen, Discover preview, 5-tab bar** | Built in the Android app (with sample friends) |
+| **Extras: question packs, question master, Ask of the day → tomorrow’s question, big groups (80% rule), leaderboards, photo and voice answers, share cards, home screen widget, Question master badge** | Built in the Android app |
+| **Wave 1: photo of the day, mood, daily challenge, battles, Draw it, Guess the group, group trivia** | Built in the Android app |
+| **Waves 2–4: friendships and memories; progress and expression; smart features and keepsakes** | Built in the Android app |
+| **Phase B: real friends across phones, contact matching, live Discover, payments** | Needs the online version |
 | **Online version** (real accounts and real friends) | Backend written in `later-online/`, not connected yet |
 | **iOS app** | Not started |
 
@@ -46,6 +50,56 @@ Version 3 needs the online version. Friends, feeds, Discover and big groups only
 - **Light, Dark or Phone theme** (Profile › Appearance, or the moon/sun button on Today).
 - **Notifications** scheduled on the phone: the daily drop, "Everyone's in," and a reminder 30 minutes before unlock.
 - **Demo shortcut:** long-press the group name on a question screen to get the next question immediately.
+
+### Also in the Android app
+
+- **Question packs:** the packs you pick (Funny, Deep talk, Throwback and more) decide which bank questions your groups get. Change them in Profile.
+- **Question master:** each day one member writes tomorrow’s group question. On your turn, a card appears under the day’s answers.
+- **Ask of the day → tomorrow’s question:** if your Ask is the group’s most answered one, it becomes the next group question, credited to you.
+- **Group sizes:** small (5), medium (9) or big (13). Groups of 10 or more keep their streak when 80% answer.
+- **Leaderboards** in each group: most consistent, funniest (most "haha" reactions) and early bird, over the last 30 days.
+- **Photo and voice answers** for the Askday moment and group questions (voice notes up to 30 seconds).
+- **Share cards:** turn any answer into a story-sized image for Instagram or WhatsApp.
+- **Home screen widget:** today’s Askday question and whether you’ve answered. Long-press your home screen › Widgets › Askday.
+- **Question master badge:** 10 of your Asks answered by the whole group.
+- **Starter groups:** after onboarding everyone joins *Askday Lounge* (13 members) and *Late Night Talks* (5), labeled as starter groups with sample members, so the app is never empty.
+- **Quick questions:** five global questions a day in Discover (and a card on Today). Answer one to see what people around the world said.
+- **Daily rituals (Today › Daily):**
+  - *Photo of the day:* a daily photo prompt. Take the photo with the back camera, then add a selfie, BeReal-style.
+  - *Mood check-in:* one tap, with a bar showing how your friends feel today.
+  - *Today's challenge:* a small daily challenge with its own streak.
+  - *Today's battle:* a global this-or-that vote, with results revealed at 9 PM.
+  - *Draw it:* a daily doodle prompt, drawn with your finger and saved as an image.
+- **Wave 2: friendships and memories**
+  - *Compliment polls (group › Play):* a positive, anonymous daily poll ("Who has the best laugh?"). See how many picked you, and reveal one hint at a time.
+  - *Duos (Friends tab):* a daily question with just one friend, with its own streak.
+  - *Friendship insights:* tap a friend on the Friends tab to see your friendship score, polls you agreed on, and reactions both ways.
+  - *Thank-you notes:* send a note from a friend's page.
+  - *Birthday mode:* on a member's birthday, the group's question is about them, and a card in the group shares a birthday card.
+  - *Group albums (group › Play › Group album):* every photo from answers, plans and events.
+  - *Time capsule (Me):* a message or voice note that opens in 1 month, 6 months or a year, with a notification.
+  - *Year in Askday (Me):* a story-style recap of your year.
+- **Wave 3: progress, expression and meeting up**
+  - *Levels and XP (Me):* points for everything you do, 100 per level.
+  - *Seasons:* a monthly theme with a featured pack, on Today and Me.
+  - *Group goals (group › Board):* answer together to hit the month's target.
+  - *Plans (group › Play):* propose a plan with times; friends vote; add meetup photos after.
+  - *Event mode (group › Play):* a one-day event that collects everyone's photos.
+  - *Music answers:* answer a group question with a song.
+  - *Profile vibes:* a "currently…" status on Me.
+  - *Custom reactions (group › Play):* up to 3 of a group's own reactions under every answer.
+  - *Voice reactions:* a 3-second voice reaction under any group answer.
+- **Wave 4: smart features and keepsakes**
+  - *Weekly insights (Me › Insights):* your moods, most-used word and top reactor this week, worked out on the phone.
+  - *Smarter questions:* packs your group reacts to most are picked first.
+  - *Ask helper:* suggestions while you write an Ask.
+  - *Make a book (Me):* exports your answers and photos as a PDF to share or print.
+- **Guess the group:** when voting on a poll Ask, guess the group's top pick. Right guesses score on the group's *Play* tab ("Knows the group best").
+- **Group trivia (group › Play):** questions about what your friends answered on earlier days.
+- **5-minute moment:** the Askday moment must be answered within 5 minutes of the drop to count as on time. Later answers are allowed and marked late.
+- **Catch up on the last 7 days:** pick an earlier day on the Friends tab to answer past moments, or tap a past group question in History. Late answers don't change streaks.
+- **Contacts:** in onboarding and from Friends › Invite contacts. See and search your contacts and invite anyone by SMS or WhatsApp. Contacts are read on the phone only and never uploaded. Seeing which contacts already use Askday, and who is online, comes with the online version.
+
 
 ### Designed for version 3
 
@@ -84,9 +138,9 @@ Version 3 needs the online version. Friends, feeds, Discover and big groups only
 
 ## Login, Firebase and ads
 
-### Phone number login (the only login)
+### Phone number or guest login
 
-People sign in with their mobile number and a 6-digit code. **Firebase Authentication sends the SMS**, and on many Android phones the code fills in by itself. "Send a new code" unlocks after 30 seconds. The first sign-in then asks for a name and photo.
+People sign in with their mobile number and a 6-digit code, or tap **Continue as guest** (on the first screen or the phone screen). Guests use Firebase anonymous sign-in: a real account ID with no phone number. **Turn on Anonymous** in Firebase › Authentication › Sign-in method for guest login to work. **Firebase Authentication sends the SMS**, and on many Android phones the code fills in by itself. "Send a new code" unlocks after 30 seconds. The first sign-in then asks for a name and photo.
 
 For now, groups and answers are still saved on the phone. Phone login identifies the person, ready for the online version. Signing in with a different number on the same phone clears the previous person's data, and so does logging out.
 
@@ -224,3 +278,82 @@ cd android
 The APK lands in `android/app/build/outputs/apk/release/app-release.apk`. It's signed with a test key, which is fine for sharing with friends. Publishing on the Play Store needs your own signing key.
 
 **Note:** the Android screens haven't been compiled yet, because the environment they were written in can't reach Google's Android libraries. The first build may report a few errors to fix.
+
+---
+
+## Phase B: the online version
+
+Phase B moves Askday onto your Firebase project (`ask-day`) so real people share groups, answers and friends across phones. The phone keeps its own copy for speed and offline use and syncs with the server.
+
+### Decisions
+- **Sample friends** appear only in the starter rooms, labeled "Sample", and only until a room has real activity that day.
+- **Starter groups** become real public rooms everyone joins (*Askday Lounge*, *Late Night Talks*). Public rooms have no shared streak; answers unlock once you answer, and the most loved show first.
+- **Discover** shows public answers only when the author turns on *Share publicly* for that answer (off by default).
+
+### Stages
+| Stage | What it does | Status |
+|---|---|---|
+| **B1 · Accounts** | Profiles on the server, restore on a new phone, unique usernames, guests can add a phone number, delete removes server data | **Built** |
+| **B2 · Friends** | Friend requests, username search, contacts on Askday (hashed numbers), online status with a privacy switch | **Built** |
+| **B3 · Real groups** | Invite links, real members, server-side drops, unlock, streaks, freezes, reactions, replies, nudges | **Built** |
+| B4 · Global | Real Askday moment, Friends feed, Quick questions, battle results, public rooms, Discover | Next |
+| B5 · Everything shared | Asks, compliment polls, Duos, plans, events, albums, photo of the day | Planned |
+| B6 · Push and safety | Push notifications, report and block, word filter, moderation, AI insights | Planned |
+
+### What's on the server (B1)
+- `users/{uid}`: the public profile (name, username, photo, status, level). Anyone signed in can read it; only you can write it.
+- `users/{uid}/private/me`: phone number, birthday, packs and settings. Only you can read or write it.
+- `usernames/{name}`: makes usernames unique.
+- Storage `avatars/{uid}.jpg`: profile photos (images under 5 MB).
+
+The rules are in `server/firestore.rules` and `server/storage.rules`.
+
+### Set up (once)
+1. **Firestore:** Firebase console › Build › Firestore Database › Create database › *Production mode* › location **asia-south1 (Mumbai)**.
+2. **Storage:** Build › Storage › Get started (same location).
+3. **Let GitHub deploy the server:** Project settings › Service accounts › **Generate new private key** (downloads a JSON file). Then in GitHub: repository › Settings › Secrets and variables › Actions › **New repository secret**, name it `FIREBASE_SERVICE_ACCOUNT`, and paste the whole file's contents.
+4. Push the `server/` folder. The **Deploy server** workflow publishes the rules. If it reports a permissions error, give that service account the **Firebase Rules Admin** role in Google Cloud › IAM.
+
+Keep the service account file private, and never commit it to the repository.
+
+### What's on the server (B2)
+- `friendRequests/{from_to}`: pending requests. Only the two people involved can see one.
+- `users/{uid}/friends/{fid}`: accepted friends, written for both people when a request is accepted.
+- `phoneHashes/{hash}`: hashed phone numbers of signed-in accounts. Only Cloud Functions can read or write this.
+- Realtime Database `status/{uid}`: online, offline or hidden, plus when you were last seen.
+- Cloud Functions (in `server/functions`, region asia-south1):
+  - `registerPhone` registers your own verified number (from your sign-in), so friends can find you.
+  - `matchContacts` takes hashed contact numbers and returns which belong to Askday accounts.
+  - `unregisterPhone` removes your number from matching when you delete your account.
+
+Contact numbers are hashed on the phone as SHA-256 of `askday-contacts-v1:` plus the number in international format (for example `+919876543210`). Raw numbers never leave the phone.
+
+### Set up for B2 (once)
+1. **Realtime Database:** Firebase console › Build › Realtime Database › Create database › location **asia-southeast1 (Singapore)** › *Start in locked mode*.
+2. **Download `google-services.json` again** (Project settings › Your apps › Android app) and replace the one in `android/app/`. The new file includes your Realtime Database address. Without it, online status stays off, but everything else works.
+3. Push `server/`. The **Deploy server** workflow now also deploys the Cloud Functions and the Realtime Database rules. The first Functions deploy can take a few minutes, because Google turns on the Cloud Functions, Cloud Build and Artifact Registry services for the project.
+4. If the deploy reports a permissions error, open Google Cloud console › IAM, find the `firebase-adminsdk` service account, and add the roles **Cloud Functions Admin**, **Service Account User** and **Artifact Registry Administrator**.
+
+### What's on the server (B3)
+- `groups/{gid}`: a real group (name, members, invite code, drop time, day, streak, freezes, next drop). Only members can read it; only Cloud Functions write it.
+- `groups/{gid}/questions/{qid}`: each day's question, who's answered, unlocked or not. Members can read; only Cloud Functions write.
+- `groups/{gid}/questions/{qid}/answers/{uid}`: your answer, with an optional photo and voice note. You can always read yours; everyone else's only after you've answered and the question has unlocked. You can only change your own reaction.
+- `…/comments/{cid}`: replies and group chat, after unlock.
+- `invites/{code}`: invite code → group (Cloud Functions only).
+- Storage `answers/{gid}/{qid}/{uid}.jpg|.m4a`: photo and voice answers, visible to group members only.
+- Cloud Functions:
+  - `createGroup`, `joinGroup`, `leaveGroup`.
+  - `onAnswer` counts answers, unlocks and grows the streak (a freeze every 7 days, up to 2).
+  - `clock` runs every 10 minutes: it drops due questions at 9 AM, 7 PM or 10 PM India time and unlocks questions after 2 hours. Before each drop it settles the previous day: a saved freeze protects the streak, otherwise it resets.
+  - `nudge` and `setNextQuestion` (the question master).
+- Hosting `ask-day.web.app`: `/j/CODE` invite pages, plus `/.well-known/assetlinks.json` so Android opens invite links straight in the app.
+
+### In the app (B3)
+- **Groups › New group › Real group** creates a group on the server with an invite link to share (WhatsApp, Instagram, Messages, Copy). **Practice group** works as before, with sample friends.
+- **Join with code**, or tap an invite link. If you're not signed in yet, Askday joins you right after sign-in.
+- Real groups appear in the same screens as before, with the same look. Answering, reactions, replies, nudges and the question master all go through the server.
+
+### Set up for B3 (once)
+1. Upload `server/`. **Deploy server** now also publishes the website (Hosting) and the database index the clock needs. The index can take a few minutes to build after the first deploy.
+2. **Storage rules read Firestore** (to check group membership). If Storage › Rules shows a banner asking for permission to read Firestore, click to allow it.
+3. The `clock` function needs **Cloud Scheduler**; Firebase turns it on during the first deploy. If the deploy log asks for it, enable "Cloud Scheduler API" in Google Cloud console.

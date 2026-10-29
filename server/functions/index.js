@@ -8,6 +8,10 @@ admin.initializeApp();
 setGlobalOptions({ region: "asia-south1", maxInstances: 10 });
 const db = admin.firestore();
 
+// B3: real groups
+Object.assign(exports, require("./groups"));
+delete exports._test;
+
 // Phone numbers are compared as SHA-256 hashes of "pepper + E.164 number" (for example +919876543210).
 // The app hashes contacts the same way, so raw numbers never leave the phone.
 const PEPPER = "askday-contacts-v1:";

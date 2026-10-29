@@ -74,6 +74,7 @@ fun NewGroupScreen() {
     var mode by rememberSaveable { mutableStateOf("create") }
     var name by rememberSaveable { mutableStateOf("") }
     var slot by rememberSaveable { mutableStateOf(DropSlot.evening) }
+    var size by rememberSaveable { mutableStateOf(4) }
     var code by rememberSaveable { mutableStateOf("") }
     var created by rememberSaveable { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -132,6 +133,12 @@ fun NewGroupScreen() {
                 }
             }
 
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Txt("How big is the group?", 14, FontWeight.Bold)
+                Segmented(listOf(Triple(4, "Small · 5", null), Triple(8, "Medium · 9", null), Triple(12, "Big · 13", null)), size) { if (created == null) size = it }
+                Txt(if (size >= 9) "Big groups keep their streak when 80% answer." else "Small groups need everyone to keep the streak.", 13, color = c.muted)
+            }
+
             AskCard(gap = 14.dp) {
                 Txt("Invite friends", 14, FontWeight.Bold)
                 Txt(
@@ -172,7 +179,7 @@ fun NewGroupScreen() {
             } else {
                 AskButton("Create group", enabled = name.isNotBlank()) {
                     var id: String? = null
-                    error = act { id = Engine.createGroup(it, name, slot, System.currentTimeMillis()) }
+                    error = act { id = Engine.createGroup(it, name, slot, System.currentTimeMillis(), size) }
                     if (id != null) {
                         haptics(true)
                         app.askday.services.Services.log("group_created", "drop_slot" to slot.name)
@@ -188,7 +195,7 @@ fun NewGroupScreen() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun GroupScreen(groupId: String, questionId: String?) {
+fun GroupScreen(groupId: String, questionId: String?, startTab: String? = null) {
     val c = colors
     val db = LocalDB.current
     val g = db.groups[groupId]
@@ -228,6 +235,21 @@ fun GroupScreen(groupId: String, questionId: String?) {
             FreezeChip(g.freezes)
             StreakChip(g.streak)
         }
+        var tab by rememberSaveable(groupId) { mutableStateOf(startTab ?: "question") }
+        val waiting = app.askday.data.Social.waitingAsks(db, groupId, System.currentTimeMillis()).size
+        if (questionId == null) {
+            Box(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 14.dp)) {
+                Segmented(listOf(Triple("question", "Question", null), Triple("asks", if (waiting > 0) "Asks · $waiting" else "Asks", null), Triple("board", "Board", null)), tab) { tab = it }
+            }
+        }
+        if (tab == "asks" && questionId == null) {
+            AsksView(g)
+            return@AskScreen
+        }
+        if (tab == "board" && questionId == null) {
+            LeaderboardView(g)
+            return@AskScreen
+        }
         if (q == null) return@AskScreen
         if (canSeeAll) AnswersView(g, q, me) else QuestionView(g, q, myAnswer, me, isCurrent)
     }
@@ -243,6 +265,7 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
     val now = rememberNow()
     val haptics = rememberHaptics()
     var text by rememberSaveable(q.id) { mutableStateOf("") }
+    var attach by remember(q.id) { mutableStateOf(Attachment()) }
     var error by remember { mutableStateOf<String?>(null) }
     val nudged = remember { mutableStateMapOf<String, Boolean>() }
     var nudgeTarget by remember { mutableStateOf<String?>(null) }
@@ -280,7 +303,10 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
         GradientBox(Modifier.fillMaxWidth().graphicsLayer { translationY = rise.value }) {
             Box(Modifier.offset(x = 230.dp, y = (-40).dp).size(180.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)))
             Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 26.dp, bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Label(if (canAnswer) "Today’s question" else "Day ${q.day}", Brand.onHeroMuted)
+                Label(
+                    (if (canAnswer) "Today’s question" else "Day ${q.day}") + (q.askedBy?.let { " · asked by " + if (it == me) "you" else db.person(it)?.name ?: "a member" } ?: ""),
+                    Brand.onHeroMuted,
+                )
                 Display(q.text, 33, Color.White)
                 if (!q.unlocked) {
                     Row(verticalAlignment = Alignment.Bottom) {
@@ -350,11 +376,13 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
                     AskIcon(Ico.Lock, c.link, 14.dp)
                     Txt("Locked in", 13, FontWeight.Bold, c.link)
                 }
-                Txt(myAnswer.text, 16, color = c.ink2, lineHeight = 23.sp)
+                if (myAnswer.text.isNotEmpty()) Txt(myAnswer.text, 16, color = c.ink2, lineHeight = 23.sp)
+                AnswerMedia(myAnswer.photo, myAnswer.voice, myAnswer.voiceMs)
             }
             canAnswer -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Txt("Your answer", 14, FontWeight.Bold)
                 AskField(text, { text = it.take(280) }, "Be honest. Nobody sees it until they answer too.", singleLine = false, minHeight = 100.dp, radius = 18.dp, focusBorder = true, textSize = 16)
+                AttachRow(attach) { attach = it }
                 if (text.length > 240) Txt("${280 - text.length} characters left", 12, color = c.muted, align = TextAlign.End, modifier = Modifier.fillMaxWidth())
             }
             else -> AskCard { Txt("You didn’t answer this one, so its answers stay locked.", 15, color = c.muted) }
@@ -362,8 +390,8 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
 
         ErrorText(error)
         if (canAnswer && myAnswer == null) {
-            AskButton("Lock in my answer", icon = Ico.Lock, enabled = text.isNotBlank()) {
-                error = act { Engine.submitAnswer(it, g.id, q.id, me, text, System.currentTimeMillis()) }
+            AskButton("Lock in my answer", icon = Ico.Lock, enabled = text.isNotBlank() || !attach.isEmpty) {
+                error = act { Engine.submitAnswer(it, g.id, q.id, me, text, System.currentTimeMillis(), attach.photo, attach.voice, attach.voiceMs) }
                 if (error == null) {
                     haptics(true)
                     app.askday.services.Services.log("answer_submitted", "day" to q.day, "length" to text.trim().length)
@@ -470,6 +498,7 @@ private fun AnswersView(g: GroupRec, q: QuestionRec, me: String) {
             }
 
             Display(q.text, 25)
+            if (q.id == g.currentId) QuestionMasterCard(g, me)
 
             if (friendAnswers >= 2) {
                 Row(
@@ -565,8 +594,13 @@ private fun AnswerCard(
             }
             Txt(clock(a.createdAt), 12, color = c.muted3)
         }
-        Txt(a.text, 15, color = c.ink2, lineHeight = 22.sp)
+        if (a.text.isNotEmpty()) Txt(a.text, 15, color = c.ink2, lineHeight = 22.sp)
+        AnswerMedia(a.photo, a.voice, a.voiceMs)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            Box(Modifier.height(32.dp).clip(CircleShape).background(c.chip).tap(label = "Share as a story card") {
+                shareAnswerCard(context, q.text, nameOf(a.uid), a.text.ifEmpty { "A photo or voice answer" })
+            }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) { AskIcon(Ico.Send, c.muted, 14.dp) }
             for (k in Reaction.entries) {
                 ReactionButton(k, a.reactions.values.count { it == k }, a.reactions[me] == k) {
                     act { Engine.toggleReaction(it, g.id, q.id, a.id, me, k) }?.let(onError)
@@ -615,3 +649,75 @@ private fun ChatBubble(m: Comment, mine: Boolean, nameOf: (String) -> String) {
         }
     }
 }
+
+// --------------------------------------------------------- question master
+
+/** Each day one member is the question master. On your turn, write tomorrow's question. */
+@Composable
+fun QuestionMasterCard(g: GroupRec, me: String) {
+    val c = colors
+    val db = LocalDB.current
+    val master = Engine.questionMaster(g)
+    var draft by rememberSaveable(g.id, g.day) { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    AskCard(border = c.goldLine, gap = 10.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(c.goldBg), contentAlignment = Alignment.Center) { AskIcon(Ico.Crown, c.goldInk, 18.dp) }
+            Column(Modifier.weight(1f)) {
+                Txt(if (master == me) "You’re today’s question master" else "${db.person(master)?.name ?: "A member"} is today’s question master", 15, FontWeight.Bold)
+                Txt(
+                    when {
+                        master != me -> "They pick tomorrow’s group question."
+                        g.nextQuestion != null -> "Tomorrow’s question: “${g.nextQuestion}”"
+                        else -> "Write tomorrow’s question for the group."
+                    },
+                    13, color = c.muted, lineHeight = 18.sp,
+                )
+            }
+        }
+        if (master == me && g.nextQuestion == null) {
+            AskField(draft, { draft = it.take(140) }, "What do you want to ask everyone?", textSize = 15)
+            ErrorText(error)
+            AskButton("Set tomorrow’s question", enabled = draft.trim().length >= 5) {
+                error = act { Engine.setNextQuestion(it, g.id, draft) }
+                if (error == null) app.askday.services.Services.log("question_master_set")
+            }
+        }
+    }
+}
+
+// ------------------------------------------------------------- leaderboard
+
+@Composable
+fun LeaderboardView(g: GroupRec) {
+    val c = colors
+    val db = LocalDB.current
+    val board = app.askday.data.Social.leaderboard(db, g.id, System.currentTimeMillis())
+    val me = db.me
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Txt("The last 30 days in ${g.name}", 14, color = c.muted)
+        for ((title, icon, list, unit) in listOf(
+            Quad("Most consistent", Ico.Flame, board.consistent, "answers"),
+            Quad("Funniest", Ico.Laugh, board.funniest, "laughs"),
+            Quad("Early bird", Ico.Sun, board.earliest, "times first"),
+        )) {
+            AskCard(gap = 10.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AskIcon(icon, Brand.accent, 18.dp)
+                    Txt(title, 15, FontWeight.Bold)
+                }
+                if (list.isEmpty()) Txt("No one yet. Answer to get on the board.", 14, color = c.muted)
+                list.forEachIndexed { i, l ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Txt("${i + 1}", 14, FontWeight.Bold, if (i == 0) c.goldInk else c.muted, tabular = true)
+                        Avatar(l.uid, db.person(l.uid)?.name, db.person(l.uid)?.photo, 30.dp)
+                        Txt(if (l.uid == me) "You" else db.person(l.uid)?.name ?: "Friend", 15, FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Txt("${l.value} $unit", 13, FontWeight.Bold, c.muted, tabular = true)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

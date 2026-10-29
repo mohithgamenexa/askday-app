@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Askday</string>
+    <string name="widget_label">TODAY’S ASKDAY</string>
+    <string name="widget_description">Today’s question, and whether you’ve answered.</string>
 </resources>

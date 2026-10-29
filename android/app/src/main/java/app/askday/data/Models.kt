@@ -36,6 +36,11 @@ data class Profile(
     var photo: String? = null,
     /** Verified phone number, for finding friends later. Never shown to other people. */
     var phone: String? = null,
+    var username: String? = null,
+    /** Day/month/year, used only for the 13+ age check. Never shown. */
+    var birthday: String? = null,
+    /** Question packs picked in onboarding ("Funny", "Deep talk", ...). */
+    var packs: MutableList<String> = mutableListOf(),
     var notif: NotifPrefs = NotifPrefs(),
     var stats: Stats = Stats(),
     /** badge id → when it was earned */
@@ -64,6 +69,11 @@ data class GroupRec(
     var nudged: MutableMap<String, String> = mutableMapOf(),
     /** Streak freezes saved up (max 2). One is used automatically when someone misses a day. */
     var freezes: Int = 0,
+    /** Tomorrow's question, written by today's question master or promoted from the Ask of the day. */
+    var nextQuestion: String? = null,
+    var nextQuestionBy: String? = null,
+    /** Joined automatically after onboarding, with sample members, so the app is never empty. */
+    var starter: Boolean = false,
 )
 
 @Serializable
@@ -81,6 +91,8 @@ data class QuestionRec(
     var topCount: Int = 0,
     /** True when a streak freeze saved the streak on this day. */
     var frozen: Boolean = false,
+    /** Who wrote this question, when a member did (question master or promoted Ask). */
+    val askedBy: String? = null,
 )
 
 @Serializable
@@ -91,6 +103,10 @@ data class Answer(
     val createdAt: Long,
     var reactions: MutableMap<String, Reaction> = mutableMapOf(),
     var replyCount: Int = 0,
+    /** Optional photo or voice note saved on the phone. */
+    val photo: String? = null,
+    val voice: String? = null,
+    val voiceMs: Long = 0,
 )
 
 @Serializable
@@ -134,6 +150,58 @@ data class GameScore(val score: Int, val total: Int)
 @Serializable
 data class Seen(val questionId: String, val count: Int)
 
+/** One friend's (or your) answer to the global Askday moment. */
+@Serializable
+data class MomentAnswer(
+    val uid: String,
+    val text: String,
+    val at: Long,
+    val late: Boolean,
+    var reactions: MutableMap<String, Reaction> = mutableMapOf(),
+    val photo: String? = null,
+    val voice: String? = null,
+    val voiceMs: Long = 0,
+)
+
+/** The global Askday moment: one question for everyone, once a day, at a different time. */
+@Serializable
+data class Moment(
+    val dayKey: String,
+    val text: String,
+    val qIndex: Int,
+    val dropAt: Long,
+    /** Answers before this count as "on time"; later ones are marked late. */
+    val onTimeUntil: Long,
+    var answers: MutableList<MomentAnswer> = mutableListOf(),
+    /** friend → when they'll answer (null = not today) */
+    var plan: MutableMap<String, Long?> = mutableMapOf(),
+)
+
+@Serializable
+enum class AskType(val label: String) { text("Text"), poll("Poll"), thisOrThat("This or that"), slider("1–10 slider"), member("Pick a member") }
+
+@Serializable
+data class AskResponse(val at: Long, val text: String? = null, val option: Int? = null, val value: Int? = null, val member: String? = null)
+
+/** A question a group member asks the rest of the group. Lasts 24 hours. */
+@Serializable
+data class Ask(
+    val id: String,
+    val groupId: String,
+    val uid: String,
+    val type: AskType,
+    val question: String,
+    val options: List<String> = emptyList(),
+    val createdAt: Long,
+    val expiresAt: Long,
+    var responses: MutableMap<String, AskResponse> = mutableMapOf(),
+    var skippedBy: MutableList<String> = mutableListOf(),
+    /** friend → when they'll respond */
+    var plan: MutableMap<String, Long> = mutableMapOf(),
+    /** Became a group's daily question. */
+    var promoted: Boolean = false,
+)
+
 @Serializable
 data class DB(
     var me: String? = null,
@@ -150,6 +218,22 @@ data class DB(
     var theme: ThemeChoice = ThemeChoice.light,
     var celebrations: MutableList<Celebration> = mutableListOf(),
     var games: MutableMap<String, GameScore> = mutableMapOf(),
+    /** Finished onboarding (find friends, notifications and vibe). */
+    var onboarded: Boolean = false,
+    /** The answer written before signing up, posted once the account exists. */
+    var pendingAnswer: String? = null,
+    var moment: Moment? = null,
+    /** Every global moment you answered, by day ("20261028" → your answer), for Memories. */
+    var momentLog: MutableMap<String, String> = mutableMapOf(),
+    var momentQuestions: MutableMap<String, String> = mutableMapOf(),
+    /** group id → its Asks */
+    var asks: MutableMap<String, MutableList<Ask>> = mutableMapOf(),
+    /** group id → the day its sample friends last posted Asks */
+    var askDays: MutableMap<String, String> = mutableMapOf(),
+    /** Quick questions you answered: "day/question index" → your answer */
+    var quick: MutableMap<String, String> = mutableMapOf(),
+    /** Starter groups were added (once only, even if you leave them later). */
+    var starterDone: Boolean = false,
 )
 
 fun qkey(groupId: String, questionId: String) = "$groupId/$questionId"

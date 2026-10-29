@@ -13,6 +13,7 @@ val BADGES = listOf(
     Badge("streak_100", "Century club", "A 100-day group streak.", BadgeIcon.flame, 0xFFD946EF),
     Badge("crowd_favorite", "Crowd favorite", "Three reactions on one answer.", BadgeIcon.crown, 0xFFEAB308),
     Badge("mind_reader", "Mind reader", "A perfect score in Who said it?", BadgeIcon.brain, 0xFF10B981),
+    Badge("question_master", "Question master", "10 of your Asks answered by the whole group.", BadgeIcon.crown, 0xFFFF7A59),
 )
 
 fun badgeById(id: String?) = BADGES.firstOrNull { it.id == id }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "597873965413",
+    "project_id": "ask-day",
+    "storage_bucket": "ask-day.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597873965413:android:e5b2f7663c11d68ea3c98c",
+        "android_client_info": {
+          "package_name": "app.askday.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUV7EA4GhCqfvY07dKkno5kVukiBlDypU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

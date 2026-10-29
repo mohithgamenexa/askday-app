@@ -138,6 +138,8 @@ object Social {
             }
             if (d.asks[g.id]?.removeAll { now > it.expiresAt + ASK_LIFETIME } == true) dirty = true
         }
+        if (Waves.tickDuos(d, now)) dirty = true
+        if (Waves.applyBirthdays(d, now)) dirty = true
         return dirty
     }
 

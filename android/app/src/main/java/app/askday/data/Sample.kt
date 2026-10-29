@@ -390,6 +390,10 @@ fun pickQuestionIndex(seed: Int, day: Int, packs: List<String>, recent: Set<Int>
     val wanted = packs.toSet()
     val start = questionIndexFor(seed, day)
     val order = (0 until n).map { questionIndexFor(seed, day + it) }.distinct().ifEmpty { listOf(start) }
+    // Packs are tried in order, so the ones your group enjoys most come first.
+    for (pack in packs) {
+        order.firstOrNull { it !in recent && pack in QUESTION_PACKS.getOrNull(it).orEmpty() }?.let { return it }
+    }
     if (wanted.isNotEmpty()) {
         order.firstOrNull { it !in recent && QUESTION_PACKS.getOrNull(it).orEmpty().any(wanted::contains) }?.let { return it }
     }

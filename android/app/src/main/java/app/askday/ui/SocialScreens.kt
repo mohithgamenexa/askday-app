@@ -119,6 +119,7 @@ fun FriendsScreen() {
                     Txt("Invite contacts", 13, FontWeight.Bold, c.btnFg)
                 }
             }
+            DuosAndFriends()
             // Today, then the last 7 days you can still answer (late).
             val days = listOfNotNull(db.moment) + db.pastMoments
             if (days.size > 1) {
@@ -175,7 +176,7 @@ fun FriendsScreen() {
                     }
                     if (locked) Txt("Answer today’s question to see this.", 15, color = c.ink2, modifier = Modifier.blur(6.dp))
                     else {
-                        if (a.text.isNotEmpty()) Txt(a.text, 15, color = c.ink2, lineHeight = 21.sp)
+                        AnswerText(a.text)
                         AnswerMedia(a.photo, a.voice, a.voiceMs)
                     }
                     if (!locked) {

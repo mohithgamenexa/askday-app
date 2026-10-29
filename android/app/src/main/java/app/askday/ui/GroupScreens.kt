@@ -242,6 +242,7 @@ fun GroupScreen(groupId: String, questionId: String?, startTab: String? = null) 
                 Segmented(listOf(Triple("question", "Question", null), Triple("asks", if (waiting > 0) "Asks · $waiting" else "Asks", null), Triple("board", "Board", null), Triple("play", "Play", null)), tab) { tab = it }
             }
         }
+        if (questionId == null) Box(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp)) { BirthdayCard(g) }
         if (tab == "asks" && questionId == null) {
             AsksView(g)
             return@AskScreen
@@ -389,6 +390,7 @@ private fun QuestionView(g: GroupRec, q: QuestionRec, myAnswer: Answer?, me: Str
                 Txt("Your answer", 14, FontWeight.Bold)
                 AskField(text, { text = it.take(280) }, "Be honest. Nobody sees it until they answer too.", singleLine = false, minHeight = 100.dp, radius = 18.dp, focusBorder = true, textSize = 16)
                 AttachRow(attach) { attach = it }
+                SongPicker { text = it }
                 if (text.length > 240) Txt("${280 - text.length} characters left", 12, color = c.muted, align = TextAlign.End, modifier = Modifier.fillMaxWidth())
             }
             else -> AskCard { Txt("You didn’t answer this one, so its answers stay locked.", 15, color = c.muted) }
@@ -600,8 +602,9 @@ private fun AnswerCard(
             }
             Txt(clock(a.createdAt), 12, color = c.muted3)
         }
-        if (a.text.isNotEmpty()) Txt(a.text, 15, color = c.ink2, lineHeight = 22.sp)
+        AnswerText(a.text)
         AnswerMedia(a.photo, a.voice, a.voiceMs)
+        ExtraReactions(g.id, q.id, a.id)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val context = androidx.compose.ui.platform.LocalContext.current
             Box(Modifier.height(32.dp).clip(CircleShape).background(c.chip).tap(label = "Share as a story card") {
@@ -701,6 +704,7 @@ fun LeaderboardView(g: GroupRec) {
     val board = app.askday.data.Social.leaderboard(db, g.id, System.currentTimeMillis())
     val me = db.me
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        GroupGoalCard(g)
         Txt("The last 30 days in ${g.name}", 14, color = c.muted)
         for ((title, icon, list, unit) in listOf(
             Quad("Most consistent", Ico.Flame, board.consistent, "answers"),

@@ -359,6 +359,7 @@ fun TodayScreen() {
                     }
                 }
             }
+            SeasonBanner()
             DailyRituals()
             if (groups.isNotEmpty()) Label("Your groups · ${toAnswer} to answer · next unlock ${nextUnlock?.let { shortLeft(it - now) } ?: "—"}")
 

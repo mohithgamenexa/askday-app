@@ -362,6 +362,7 @@ fun PlayView(g: GroupRec) {
                 }
             }
         }
+        PlayExtras(g)
     }
 }
 

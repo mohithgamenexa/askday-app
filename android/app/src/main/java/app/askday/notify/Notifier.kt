@@ -38,6 +38,7 @@ object Notifier {
             val next = app.askday.data.Social.momentDropFor(now).let { if (it <= now) app.askday.data.Social.momentDropFor(now + 86_400_000L) else it }
             out += Planned(next, "It’s time to Askday", "Today’s question just dropped. You have 5 minutes to answer on time.", "")
         }
+        for (cap in d.capsules) if (cap.opensAt > now) out += Planned(cap.opensAt, "Your time capsule just opened", "A message from ${java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(cap.createdAt))} is waiting for you.", "")
         for (g in d.groups.values) {
             val next = g.nextDropAt
             if (prefs.daily && next != null) {

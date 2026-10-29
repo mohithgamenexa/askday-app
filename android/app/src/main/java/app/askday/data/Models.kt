@@ -256,6 +256,57 @@ data class DB(
     var doodles: MutableMap<String, String> = mutableMapOf(),
     /** group id → best group-trivia score */
     var trivia: MutableMap<String, Int> = mutableMapOf(),
+    // ---- waves 2–4
+    var compliments: MutableMap<String, MutableList<ComplimentPoll>> = mutableMapOf(),
+    var duos: MutableList<Duo> = mutableListOf(),
+    var notes: MutableList<ThanksNote> = mutableListOf(),
+    var capsules: MutableList<Capsule> = mutableListOf(),
+    var plans: MutableMap<String, MutableList<Plan>> = mutableMapOf(),
+    var events: MutableMap<String, GroupEvent> = mutableMapOf(),
+    /** group id → its own extra reactions */
+    var customReactions: MutableMap<String, MutableList<String>> = mutableMapOf(),
+    /** "group/question/answer" → person → custom reaction label */
+    var customVotes: MutableMap<String, MutableMap<String, String>> = mutableMapOf(),
+    /** "group/question/answer" → person → voice reaction file */
+    var voiceReactions: MutableMap<String, MutableMap<String, String>> = mutableMapOf(),
+    /** person → birthday "DD/MM" (sample friends get one too) */
+    var birthdays: MutableMap<String, String> = mutableMapOf(),
+    /** A short "currently…" line on your profile. */
+    var status: String? = null,
 )
+
+/** A positive-only poll: "Who has the best laugh?" */
+@Serializable
+data class ComplimentPoll(val id: String, val day: String, val question: String, var votes: MutableMap<String, String> = mutableMapOf(), var hintsSeen: MutableList<String> = mutableListOf())
+
+@Serializable
+data class DuoDay(val qIndex: Int, var mine: String? = null, var theirs: String? = null, var theirsAt: Long = 0)
+
+/** A daily question just between you and one friend. */
+@Serializable
+data class Duo(val id: String, val friend: String, val createdAt: Long, var streak: Int = 0, var days: MutableMap<String, DuoDay> = mutableMapOf())
+
+@Serializable
+data class ThanksNote(val id: String, val from: String, val to: String, val text: String, val at: Long)
+
+/** A message or voice note that unlocks later. */
+@Serializable
+data class Capsule(val id: String, val text: String, val voice: String? = null, val createdAt: Long, val opensAt: Long)
+
+@Serializable
+data class Plan(
+    val id: String,
+    val groupId: String,
+    val by: String,
+    val title: String,
+    val options: List<String>,
+    val createdAt: Long,
+    var votes: MutableMap<String, Int> = mutableMapOf(),
+    var photos: MutableList<String> = mutableListOf(),
+)
+
+/** A one-day themed event in a group: a trip, a wedding, a fest. */
+@Serializable
+data class GroupEvent(val name: String, val day: String, var photos: MutableList<String> = mutableListOf())
 
 fun qkey(groupId: String, questionId: String) = "$groupId/$questionId"

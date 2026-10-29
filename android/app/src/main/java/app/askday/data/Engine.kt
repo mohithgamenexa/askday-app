@@ -67,7 +67,9 @@ object Engine {
             promoted != null -> { text = promoted.question; askedBy = promoted.uid; promoted.promoted = true }
             else -> {
                 val recent = d.questions[g.id]?.values.orEmpty().sortedByDescending { it.day }.take(20).map { it.qIndex }.toSet()
-                qIndex = pickQuestionIndex(g.seed, day, d.profile?.packs.orEmpty(), recent)
+                val mine = d.profile?.packs.orEmpty()
+                val ordered = (Waves.packsByEngagement(d, g.id).filter { it in mine } + mine).distinct()
+                qIndex = pickQuestionIndex(g.seed, day, ordered, recent)
                 text = DEMO_QUESTIONS[qIndex].text
             }
         }

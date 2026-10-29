@@ -269,6 +269,7 @@ fun NewAskScreen(groupId: String) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Txt("Your question", 14, FontWeight.Bold)
                 AskField(question, { question = it.take(140) }, if (type == AskType.member) "Who’s most likely to…" else "Ask the group anything", focusBorder = true)
+                AskHelperHints(question, type, options.toList())
             }
             if (type == AskType.poll || type == AskType.thisOrThat) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

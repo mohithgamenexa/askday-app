@@ -231,6 +231,8 @@ fun ProfileScreen() {
                     }
                 }
             }
+            MeExtras()
+            db.status?.let { Txt("“$it”", 15, FontWeight.Medium, c.ink2) }
             Row {
                 Box(Modifier.weight(1f)) { Label("Badges") }
                 Txt("${BADGES.count { it.id in p.badges }} of ${BADGES.size}", 13, FontWeight.Bold, c.muted, tabular = true)

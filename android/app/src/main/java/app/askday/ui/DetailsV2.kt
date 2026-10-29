@@ -62,7 +62,7 @@ fun DetailsScreenV2() {
                     // Make sure nobody else has this username; undo it locally if they do.
                     val uid = app.askday.services.PhoneAuth.currentUid
                     if (uid != null) app.askday.services.Cloud.claimUsername(uid, username) { err ->
-                        if (err != null) {
+                        if (err != null && err.contains("is taken")) {
                             error = err
                             act { it.profile?.username = null }
                         }

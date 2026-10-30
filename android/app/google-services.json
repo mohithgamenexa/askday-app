@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "597873965413",
+    "firebase_url": "https://ask-day-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "ask-day",
     "storage_bucket": "ask-day.firebasestorage.app"
   },
